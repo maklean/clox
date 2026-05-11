@@ -13,7 +13,7 @@ TARGET=clox
 $(TARGET): $(OBJECT_FILES)
 	$(CC) $(CCFLAGS) -o $@ $^
 
-$(BUILD_DIR)/%.o: $(SRC_DIR)/%.c
+$(BUILD_DIR)/%.o: $(SRC_DIR)/%.c $(DEPS)
 	@mkdir -p $(BUILD_DIR)
 	$(CC) $(CCFLAGS) -c $< -o $@
 
