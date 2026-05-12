@@ -6,8 +6,13 @@
 
 // Opcode enum
 typedef enum {
-    OP_CONSTANT, // 1 byte operand
-    OP_CONSTANT_LONG, // 3 byte operand
+    OP_CONSTANT,
+    OP_CONSTANT_LONG,
+    OP_ADD,
+    OP_SUBTRACT,
+    OP_MULTIPLY,
+    OP_DIVIDE,
+    OP_NEGATE,
     OP_RETURN
 } OpCode;
 
@@ -16,7 +21,7 @@ typedef struct {
     int count;
     int capacity;
     uint8_t *code; // array of bytes
-    int* lines; // array of line numbers corresponding to 'code'
+    int *lines; // array of line numbers corresponding to 'code'
     ValueArray constants; // constant pool
 } Chunk;
 
