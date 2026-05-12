@@ -26,9 +26,6 @@ void initChunk(Chunk *chunk);
 // Writes to the given Chunk dynamic array.
 void writeChunk(Chunk* chunk, uint8_t byte, int line);
 
-// Adds a constant to the Chunk's constant pool. Returns the index where the constant was appended in the constant pool.
-int addConstant(Chunk *chunk, Value value);
-
 // Writes the given constant to the Chunk's constant pool, and writes to the Chunk's dynamic bytecode array.
 void writeConstant(Chunk* chunk, Value value, int line);
 
