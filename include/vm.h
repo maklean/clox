@@ -22,10 +22,12 @@ typedef enum {
     INTERPRET_RUNTIME_ERROR
 } InterpretResult;
 
+// Initializes the VM.
 void initVM();
 
 void freeVM();
 
+// Interprets the given Chunk of instructions.
 InterpretResult interpret(Chunk *chunk);
 
 // Pushes a value onto the VM's stack.
