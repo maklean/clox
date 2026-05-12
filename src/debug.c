@@ -2,6 +2,7 @@
 #include "../include/value.h"
 
 #include <stdio.h>
+#include <string.h>
 
 // Displays a simple instruction to the console. Offsets to the immediate next instruction.
 static int simpleInstruction(const char *name, int offset);
@@ -34,6 +35,8 @@ int disassembleInstruction(Chunk *chunk, int offset) {
     switch(instruction) {
         case OP_CONSTANT:
             return constantInstruction("OP_CONSTANT", chunk, offset);
+        case OP_CONSTANT_LONG:
+            return constantInstruction("OP_CONSTANT_LONG", chunk, offset);
         case OP_RETURN:
             return simpleInstruction("OP_RETURN", offset);
         default:
@@ -48,7 +51,17 @@ static int simpleInstruction(const char *name, int offset) {
 }
 
 static int constantInstruction(const char *name, Chunk *chunk, int offset) {
-    uint8_t constant = chunk->code[offset+1]; // constant index
+    int constant; // constant index
+    int offset_skip;
+
+    if(strcmp(name, "OP_CONSTANT") == 0) {
+        constant = chunk->code[offset+1];
+        offset_skip = 2;
+    } else {
+        // OP_CONSTANT_LONG get 3 bytes for index
+        constant = (chunk->code[offset+1] << 16) | (chunk->code[offset+2] << 8) | chunk->code[offset+3];
+        offset_skip = 4;
+    }
 
     // print instruction name + constant
     printf("%-16s %4d '", name, constant);
@@ -56,5 +69,5 @@ static int constantInstruction(const char *name, Chunk *chunk, int offset) {
     printf("'\n");
 
     // skip over instruction + const. index operand
-    return offset+2;
+    return offset+offset_skip;
 }

@@ -6,7 +6,8 @@
 
 // Opcode enum
 typedef enum {
-    OP_CONSTANT,
+    OP_CONSTANT, // 1 byte operand
+    OP_CONSTANT_LONG, // 3 byte operand
     OP_RETURN
 } OpCode;
 
@@ -27,6 +28,9 @@ void writeChunk(Chunk* chunk, uint8_t byte, int line);
 
 // Adds a constant to the Chunk's constant pool. Returns the index where the constant was appended in the constant pool.
 int addConstant(Chunk *chunk, Value value);
+
+// Writes the given constant to the Chunk's constant pool, and writes to the Chunk's dynamic bytecode array.
+void writeConstant(Chunk* chunk, Value value, int line);
 
 // Frees the Chunks dynamic memory from the heap.
 void freeChunk(Chunk* chunk);
