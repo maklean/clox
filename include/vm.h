@@ -27,8 +27,8 @@ void initVM();
 
 void freeVM();
 
-// Interprets the given Chunk of instructions.
-InterpretResult interpret(Chunk *chunk);
+// Interprets the given code.
+InterpretResult interpret(const char *source);
 
 // Pushes a value onto the VM's stack.
 void push(Value value);

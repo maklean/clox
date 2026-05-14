@@ -5,8 +5,8 @@ BUILD_DIR=build
 SRC_DIR=src
 INCLUDE_DIR=include
 
-OBJECT_FILES=$(addprefix $(BUILD_DIR)/,chunk.o debug.o main.o memory.o value.o vm.o)
-DEPS=$(addprefix $(INCLUDE_DIR)/,chunk.h common.h debug.h memory.h value.h vm.h)
+OBJECT_FILES=$(addprefix $(BUILD_DIR)/,chunk.o compiler.o debug.o main.o memory.o scanner.o value.o vm.o)
+DEPS=$(addprefix $(INCLUDE_DIR)/,chunk.h common.h compiler.h debug.h memory.h scanner.h value.h vm.h)
 
 TARGET=clox
 

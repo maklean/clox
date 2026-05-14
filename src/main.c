@@ -4,38 +4,88 @@
 #include "../include/vm.h"
 
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sysexits.h>
+
+// Runs the REPL.
+static void repl();
+
+// Runs the file at the given path.
+static void runFile(const char *path);
+
+// Returns the contents of the file at 'path'.
+static char *readFile(const char *path);
 
 int main(int argc, const char **argv) {
     initVM();
-    Chunk chunk;
 
-    initChunk(&chunk);
+    if(argc == 1) {
+        repl();
+    } else if(argc == 2) {
+        runFile(argv[1]);
+    } else {
+        fprintf(stderr, "Usage: clox [path]\n");
+        exit(EX_USAGE);
+    }
 
-    // perform: 1 + 2 * 3 - 4 / -5
-
-    // 2*3
-    writeConstant(&chunk, 2, 1);
-    writeConstant(&chunk, 3, 1);
-    writeChunk(&chunk, OP_MULTIPLY, 1);
-
-    // +1
-    writeConstant(&chunk, 1, 1);
-    writeChunk(&chunk, OP_ADD, 1);
-
-    // 4 / -5
-    writeConstant(&chunk, 4, 1);
-    writeConstant(&chunk, 5, 1);
-    writeChunk(&chunk, OP_NEGATE, 1);
-    writeChunk(&chunk, OP_DIVIDE, 1);
-    
-    writeChunk(&chunk, OP_SUBTRACT, 1);
-
-    writeChunk(&chunk, OP_RETURN, 1);
-
-    printf("Interpret result = %d\n", interpret(&chunk));
-
-    freeChunk(&chunk);
     freeVM();
 
     return 0;
+}
+
+static void repl() {
+    char line[1024];
+
+    for(;;) {
+        printf("> ");
+
+        if(!fgets(line, sizeof(line), stdin)) {
+            printf("\n");
+            break;
+        }
+
+        interpret(line);
+    }
+}
+
+static void runFile(const char *path) {
+    char *source = readFile(path);
+
+    InterpretResult result = interpret(source);
+    free(source);
+
+    if(result == INTERPRET_COMPILE_ERROR) exit(EX_DATAERR);
+    if(result == INTERPRET_RUNTIME_ERROR) exit(EX_SOFTWARE);
+}
+
+static char *readFile(const char *path) {
+    if(path == NULL) exit(EX_USAGE);
+
+    FILE *f = fopen(path, "rb");
+    if(f == NULL) {
+        fprintf(stderr, "Failed to open file at \"%s\".\n", path);
+        exit(EX_IOERR);
+    }
+
+    fseek(f, 0, SEEK_END);
+    size_t length = ftell(f);
+    rewind(f);
+
+    char *buffer = malloc(length+1);
+    if(buffer == NULL) {
+        fprintf(stderr, "Not enough memory to read \"%s\".\n", path);
+        exit(EX_IOERR);
+    }
+
+    size_t read = fread(buffer, 1, length, f);
+    if(read < length) {
+        fprintf(stderr, "Could not read \"%s\".\n", path);
+        exit(EX_IOERR);
+    }
+
+    buffer[read] = '\0';
+
+    fclose(f);
+    return buffer;
 }
