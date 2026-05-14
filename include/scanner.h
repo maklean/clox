@@ -16,7 +16,7 @@ typedef enum {
 
   // Literals.
   TOKEN_IDENTIFIER, TOKEN_STRING, TOKEN_NUMBER,
-  
+
   // Keywords.
   TOKEN_AND, TOKEN_CLASS, TOKEN_ELSE, TOKEN_FALSE,
   TOKEN_FOR, TOKEN_FUN, TOKEN_IF, TOKEN_NIL, TOKEN_OR,
@@ -33,8 +33,10 @@ typedef struct {
     int line;
 } Token;
 
+// Initializes the global scanner.
 void initScanner(const char* source);
 
+// Scans the next token.
 Token scanToken();
 
 #endif

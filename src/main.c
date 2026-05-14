@@ -72,6 +72,7 @@ static char *readFile(const char *path) {
     size_t length = ftell(f);
     rewind(f);
 
+    // copy entire file content into 'buffer'
     char *buffer = malloc(length+1);
     if(buffer == NULL) {
         fprintf(stderr, "Not enough memory to read \"%s\".\n", path);
