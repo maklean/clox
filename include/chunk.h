@@ -31,8 +31,8 @@ void initChunk(Chunk *chunk);
 // Writes to the given Chunk dynamic array.
 void writeChunk(Chunk* chunk, uint8_t byte, int line);
 
-// Writes the given constant to the Chunk's constant pool, and writes to the Chunk's dynamic bytecode array.
-void writeConstant(Chunk* chunk, Value value, int line);
+// Writes the given constant to the Chunk's constant pool, and writes to the Chunk's dynamic bytecode array. Returns whether there was enough space to write.
+bool writeConstant(Chunk* chunk, Value value, int line);
 
 // Frees the Chunks dynamic memory from the heap.
 void freeChunk(Chunk* chunk);

@@ -77,8 +77,23 @@ static InterpretResult run() {
 }
 
 InterpretResult interpret(const char *source) {
-    compile(source);
-    return INTERPRET_OK;
+    Chunk chunk;
+    initChunk(&chunk);
+
+    // Compile source and write instructions into 'chunk'.
+    if(!compile(source, &chunk)) {
+        freeChunk(&chunk);
+        return INTERPRET_COMPILE_ERROR;
+    }
+
+    // Run VM with the resulting chunk instructions.
+    vm.chunk = &chunk;
+    vm.ip = vm.chunk->code;
+
+    InterpretResult result = run();
+
+    freeChunk(&chunk);
+    return result;
 }
 
 static void resetStack() {

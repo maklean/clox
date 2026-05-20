@@ -2,6 +2,7 @@
 #include "../include/memory.h"
 
 #include <stdlib.h>
+#include <stdbool.h>
 
 void initChunk(Chunk *chunk) {
     chunk->count = 0;
@@ -34,10 +35,15 @@ void writeChunk(Chunk* chunk, uint8_t byte, int line) {
     chunk->lines[chunk->count++] = line;
 }
 
-void writeConstant(Chunk* chunk, Value value, int line) {
+bool writeConstant(Chunk* chunk, Value value, int line) {
     writeValueArray(&chunk->constants, value);
 
     int index = chunk->constants.count-1;
+
+    // Not enough space if it's over the 3 byte limit
+    if(index > 16277215) {
+        return false;
+    }
 
     if(index <= 255) {
         // use OP_CONSTANT for indexes in [0, 255]
@@ -52,4 +58,6 @@ void writeConstant(Chunk* chunk, Value value, int line) {
         writeChunk(chunk, (index >> 8) & 0xFF, line);
         writeChunk(chunk, index & 0xFF, line);
     }
+
+    return true;
 }
