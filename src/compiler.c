@@ -86,9 +86,10 @@ static void binary();
 // Writes the `OP_RETURN` instruction to the current chunk.
 static void emitReturn();
 
-// Writes the `OP_CONSTANT` instruction to the current chunk.
+// Writes the `OP_CONSTANT` or `OP_CONSTANT_LONG` instruction to the current chunk.
 static void emitConstant(Value value);
 
+// Handles parsing with precedence by calling functions of equal or higher precedence.
 static void parsePrecedence(Precedence precedence);
 
 // Gets the rule for the given token type.
