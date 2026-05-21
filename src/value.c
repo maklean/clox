@@ -28,5 +28,21 @@ void freeValueArray(ValueArray *array) {
 }
 
 void printValue(Value value) {
-    printf("%g", value);
+    switch(value.type) {
+        case VAL_NUMBER: printf("%g", AS_NUMBER(value)); break;
+        case VAL_NIL: printf("nil"); break;
+        case VAL_BOOL: printf("%s", AS_BOOL(value) ? "true" : "false");
+    }
+}
+
+bool valuesEqual(Value a, Value b) {
+    if(a.type != b.type) return false;
+
+    // toy language and it's already better than JS' type coercion.
+    switch(a.type) {
+        case VAL_NUMBER: return AS_NUMBER(a) == AS_NUMBER(b);
+        case VAL_BOOL: return AS_BOOL(a) == AS_BOOL(b);
+        case VAL_NIL: return true;
+        default: return false; // Unreachable.
+    }
 }
