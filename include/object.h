@@ -31,6 +31,7 @@ struct ObjString {
     char *chars;
 };
 
+// Allocates a heap-allocated `ObjString` made from 'chars' and 'length'.
 ObjString *takeString(char *chars, int length);
 
 // Copies 'length' characters starting at 'chars' and returns a heap-allocated `ObjString`.
@@ -39,6 +40,7 @@ ObjString* copyString(const char* chars, int length);
 // Prints the object value.
 void printObject(Value value);
 
+// Returns whether the type of a value matches the given type.
 static inline bool isObjType(Value value, ObjType type) {
     return IS_OBJ(value) && AS_OBJ(value)->type == type;
 }

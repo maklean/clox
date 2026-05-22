@@ -50,6 +50,7 @@ bool valuesEqual(Value a, Value b) {
             ObjString *a_str = AS_STRING(a);
             ObjString *b_str = AS_STRING(b);
 
+            // compare the string contents
             return a_str->length == b_str->length && memcmp(a_str->chars, b_str->chars, a_str->length) == 0;
 
         default: return false; // Unreachable.

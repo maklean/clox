@@ -8,6 +8,7 @@
 
 extern VM vm;
 
+// Allocates a generic `Obj` with a size of 'size' and type of `type` on the heap.
 #define ALLOCATE_OBJ(typeSize, objType) allocateObject(typeSize, objType)
 
 // Returns a heap-allocated generic `Obj` with a size of 'size' created from `type`.
