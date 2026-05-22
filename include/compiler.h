@@ -2,6 +2,7 @@
 #define clox_compiler_h
 
 #include "vm.h"
+#include "object.h"
 
 #include <stdbool.h>
 

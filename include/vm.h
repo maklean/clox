@@ -14,6 +14,7 @@ typedef struct {
     uint8_t *ip;
     Value stack[STACK_MAX];
     Value *stackTop; // points to where the next pushed value goes
+    Obj *objects; // linked-list of all heap-allocated values
 } VM;
 
 typedef enum {

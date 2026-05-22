@@ -14,7 +14,16 @@
 #define FREE_ARRAY(typeSize, pointer, oldCount) \
     reallocate(pointer, (typeSize) * (oldCount), 0)
 
+// Allocates 'typeSize' * 'count' bytes amount of memory on the heap.
+#define ALLOCATE(typeSize, count) reallocate(NULL, 0, (typeSize) * (count))
+
+// Frees the given heap-allocated memory.
+#define FREE(typeSize, pointer) reallocate(pointer, typeSize, 0)
+
 // Reallocates memory for the given pointer from 'oldSize' to 'newSize'.
 void *reallocate(void *pointer, size_t oldSize, size_t newSize);
+
+// Frees all the objects in the VM's linked-list.
+void freeObjects();
 
 #endif

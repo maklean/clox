@@ -3,9 +3,11 @@
 #include "../include/vm.h"
 #include "../include/compiler.h"
 #include "../include/value.h"
+#include "../include/memory.h"
 
 #include <stdio.h>
 #include <stdarg.h>
+#include <string.h>
 
 VM vm;
 
@@ -21,12 +23,16 @@ static void runtimeError(const char *format, ...);
 // Returns whether the value is falsey or not (is nil or false)
 static bool isFalsey(Value value);
 
+// Concatenates the top two strings on the stack.
+static void concatenate();
+
 void initVM() {
     resetStack();
+    vm.objects = NULL;
 }
 
 void freeVM() {
-
+    freeObjects();
 }
 
 static InterpretResult run() {
@@ -76,7 +82,18 @@ static InterpretResult run() {
                 break;
             }
 
-            case OP_ADD: BINARY_OP(NUMBER_VAL, +); break;
+            case OP_ADD: {
+                if(IS_STRING(peek(0)) && IS_STRING(peek(1))) {
+                    concatenate();
+                } else if(IS_NUMBER(peek(0)) && IS_NUMBER(peek(1))) {
+                    BINARY_OP(NUMBER_VAL, +);
+                } else {
+                    runtimeError("Operands must be two numbers or two strings.");
+                    return INTERPRET_RUNTIME_ERROR;
+                }
+
+                break;
+            }
             case OP_SUBTRACT: BINARY_OP(NUMBER_VAL, -); break;
             case OP_MULTIPLY: BINARY_OP(NUMBER_VAL, *); break;
             case OP_DIVIDE: BINARY_OP(NUMBER_VAL, /); break;
@@ -168,4 +185,21 @@ static void runtimeError(const char *format, ...) {
 
 static bool isFalsey(Value value) {
     return IS_NIL(value) || (IS_BOOL(value) && AS_BOOL(value) == false);
+}
+
+static void concatenate() {
+    ObjString *b = AS_STRING(pop());
+    ObjString *a = AS_STRING(pop());
+
+    int length = a->length + b->length;
+    char *chars = ALLOCATE(sizeof(char), length+1);
+
+    // copy characters from a, b, then add null-terminator
+    memcpy(chars, a->chars, a->length);
+    memcpy(chars+a->length, b->chars, b->length);
+    chars[length] = '\0';
+
+    ObjString *result = takeString(chars, length);
+
+    push(OBJ_VAL(result));
 }

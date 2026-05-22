@@ -86,6 +86,9 @@ static void binary();
 // Parses a literal (true|false|nil).
 static void literal();
 
+// Parses a string.
+static void string();
+
 // Writes the `OP_RETURN` instruction to the current chunk.
 static void emitReturn();
 
@@ -119,7 +122,7 @@ ParseRule rules[] = {
   [TOKEN_LESS]          = {NULL,     binary, PREC_COMPARISON},
   [TOKEN_LESS_EQUAL]    = {NULL,     binary, PREC_COMPARISON},
   [TOKEN_IDENTIFIER]    = {NULL,     NULL,   PREC_NONE},
-  [TOKEN_STRING]        = {NULL,     NULL,   PREC_NONE},
+  [TOKEN_STRING]        = {string,   NULL,   PREC_NONE},
   [TOKEN_NUMBER]        = {number,   NULL,   PREC_NONE},
   [TOKEN_AND]           = {NULL,     NULL,   PREC_NONE},
   [TOKEN_CLASS]         = {NULL,     NULL,   PREC_NONE},
@@ -294,6 +297,10 @@ static void literal() {
         case TOKEN_TRUE: emitByte(OP_TRUE); break;
         default: return; // Unreachable.
     }
+}
+
+static void string() {
+    emitConstant(OBJ_VAL(copyString(parser.previous.start+1, parser.previous.length-2)));
 }
 
 static void parsePrecedence(Precedence precedence) {
