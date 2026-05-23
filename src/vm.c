@@ -29,9 +29,11 @@ static void concatenate();
 void initVM() {
     resetStack();
     vm.objects = NULL;
+    initTable(&vm.strings);
 }
 
 void freeVM() {
+    freeTable(&vm.strings);
     freeObjects();
 }
 
@@ -113,11 +115,12 @@ static InterpretResult run() {
 
             case OP_NOT: push(BOOL_VAL(isFalsey(pop()))); break;
 
-            case OP_EQUAL:
+            case OP_EQUAL: {
                 Value b = pop();
                 Value a = pop();
                 push(BOOL_VAL(valuesEqual(a, b)));
                 break;
+            }
             case OP_GREATER: BINARY_OP(BOOL_VAL, >); break;
             case OP_LESS: BINARY_OP(BOOL_VAL, <); break;
         }

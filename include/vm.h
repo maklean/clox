@@ -5,6 +5,7 @@
 
 #include "chunk.h"
 #include "value.h"
+#include "table.h"
 
 #include <stdint.h>
 
@@ -15,6 +16,7 @@ typedef struct {
     Value stack[STACK_MAX];
     Value *stackTop; // points to where the next pushed value goes
     Obj *objects; // linked-list of all heap-allocated values
+    Table strings; // for string interning
 } VM;
 
 typedef enum {
