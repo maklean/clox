@@ -1,7 +1,7 @@
 #ifndef clox_vm_h
 #define clox_vm_h
 
-#define STACK_MAX 256
+#define STACK_MAX 16277215
 
 #include "chunk.h"
 #include "value.h"
@@ -17,6 +17,7 @@ typedef struct {
     Value *stackTop; // points to where the next pushed value goes
     Obj *objects; // linked-list of all heap-allocated values
     Table strings; // for string interning
+    Table globals; // for global variables
 } VM;
 
 typedef enum {

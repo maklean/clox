@@ -45,6 +45,12 @@ Chunk *compilingChunk;
 // Advances through the scanner's token stream. Sets the first encountered non-error token to parser.current.
 static void advance();
 
+// Attempts to match the next token with the given type, returns true and advances if so.
+static bool match(TokenType type);
+
+// Checks whether the next token to consume is of the given type.
+static bool check(TokenType type);
+
 // Reports an error at the current token in the parser.
 static void errorAtCurrent(const char *message);
 
@@ -67,6 +73,21 @@ static void emitBytes(uint8_t byte1, uint8_t byte2);
 static Chunk *currentChunk();
 
 static void endCompiler();
+
+// Parses a declaration
+static void declaration();
+
+// Parses a variable declaration.
+static void varDeclaration();
+
+// Parses a statement.
+static void statement();
+
+// Parses a print statement.
+static void printStatement();
+
+// Parses an expression statement.
+static void expressionStatement();
 
 // Parses an expression.
 static void expression();
@@ -98,8 +119,20 @@ static void emitConstant(Value value);
 // Handles parsing with precedence by calling functions of equal or higher precedence.
 static void parsePrecedence(Precedence precedence);
 
+// Consumes a variable identifier and returns the index of the constant in the constant table.
+static int parseVariable(const char *errorMessage);
+
+// Emits a OP_DEFINE_GLOBAL instruction.
+static void defineVariable(int global);
+
+// Adds the given token to the constant table (as an ObjString), and returns its index.
+static int identifierConstant(Token *name);
+
 // Gets the parse rule for the given token type.
 static ParseRule *getRule(TokenType type);
+
+// Tries to exit panic mode by finding the next synchronization point.
+static void synchronize();
 
 ParseRule rules[] = {
   [TOKEN_LEFT_PAREN]    = {grouping, NULL,   PREC_NONE},
@@ -153,8 +186,10 @@ bool compile(const char* source, Chunk *chunk) {
     parser.panicMode = false;
 
     advance();
-    expression();
-    consume(TOKEN_EOF, "Expect end of expression.");
+
+    while(!match(TOKEN_EOF)) {
+        declaration();
+    }
 
     endCompiler();
 
@@ -180,6 +215,16 @@ static void advance() {
 
         errorAtCurrent(parser.current.start);
     }
+}
+
+static bool match(TokenType type) {
+    if(!check(type)) return false;
+    advance();
+    return true;
+}
+
+static bool check(TokenType type) {
+    return parser.current.type == type;
 }
 
 static void consume(TokenType type, const char *message) {
@@ -240,6 +285,53 @@ static void errorAt(Token *token, const char *message) {
 
     fprintf(stderr, ": %s\n", message);
     parser.hadError = true;
+}
+
+static void declaration() {
+    if(match(TOKEN_VAR)) {
+        varDeclaration();
+    } else {
+        // if it doesn't match any of the tokens above, it's a statement
+        statement();
+    }
+
+    // Find synchronization point if we're in panic mode
+    if(parser.panicMode) synchronize();
+}
+
+static void varDeclaration() {
+    int global = parseVariable("Expected variable/identifier name.");
+
+    if(match(TOKEN_EQUAL)) {
+        expression();
+    } else {
+        // use nil as the initializer expression if none was provided
+        emitByte(OP_NIL);
+    }
+
+    consume(TOKEN_SEMICOLON, "Expected ';' after variable declaration.");
+    defineVariable(global);
+}
+
+static void statement() {
+    if(match(TOKEN_PRINT)) {
+        printStatement();
+    } else {
+        // if we couldn't match with any token, it's an expression statement.
+        expressionStatement();
+    }
+}
+
+static void printStatement() {
+    expression();
+    consume(TOKEN_SEMICOLON, "Expected ';' after value in print statement.");
+    emitByte(OP_PRINT);
+}
+
+static void expressionStatement() {
+    expression();
+    consume(TOKEN_SEMICOLON, "Expected ';' after an expression.");
+    emitByte(OP_POP);
 }
 
 static void expression() {
@@ -323,6 +415,54 @@ static void parsePrecedence(Precedence precedence) {
     }
 }
 
+static int parseVariable(const char *errorMessage) {
+    consume(TOKEN_IDENTIFIER, errorMessage);
+    return identifierConstant(&parser.previous);
+}
+
+static void defineVariable(int global) {
+    if(global <= 255) {
+        emitBytes(OP_DEFINE_GLOBAL, (uint8_t)global);
+    } else {
+        emitByte(OP_DEFINE_GLOBAL_LONG);
+
+        emitByte((uint8_t)((global >> 16) & 0xFF));
+        emitByte((uint8_t)((global >> 8) & 0xFF));
+        emitByte((uint8_t)(global & 0xFF));
+    }
+}
+
+static int identifierConstant(Token *name) {
+    emitConstant(OBJ_VAL(copyString(name->start, name->length)));
+
+    // this should work...
+    return currentChunk()->constants.count-1;
+}
+
 static ParseRule *getRule(TokenType type) {
     return &rules[type];
+}
+
+static void synchronize() {
+    parser.panicMode = false;
+
+    while(parser.current.type != TOKEN_EOF) {
+        if(parser.previous.type == TOKEN_SEMICOLON) return;
+
+        // if the next token is any of these, stop here.
+        switch(parser.current.type) {
+            case TOKEN_CLASS:
+            case TOKEN_FUN:
+            case TOKEN_VAR:
+            case TOKEN_FOR:
+            case TOKEN_IF:
+            case TOKEN_WHILE:
+            case TOKEN_PRINT:
+            case TOKEN_RETURN:
+                return;
+            default: ; // nothing
+        }
+
+        advance();
+    }
 }

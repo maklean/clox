@@ -30,10 +30,12 @@ void initVM() {
     resetStack();
     vm.objects = NULL;
     initTable(&vm.strings);
+    initTable(&vm.globals);
 }
 
 void freeVM() {
     freeTable(&vm.strings);
+    freeTable(&vm.globals);
     freeObjects();
 }
 
@@ -41,6 +43,8 @@ static InterpretResult run() {
     #define READ_BYTE() (*vm.ip++)
     #define READ_CONSTANT() (vm.chunk->constants.values[READ_BYTE()])
     #define READ_CONSTANT_LONG() (vm.chunk->constants.values[(READ_BYTE() << 16) | (READ_BYTE() << 8) | READ_BYTE()])
+    #define READ_STRING() AS_STRING(READ_CONSTANT())
+    #define READ_STRING_LONG() AS_STRING(READ_CONSTANT_LONG())
     #define BINARY_OP(valueType, op) \
         do { \
             if(!IS_NUMBER(peek(0)) || !IS_NUMBER(peek(1))) { \
@@ -72,8 +76,6 @@ static InterpretResult run() {
 
         switch(instruction = READ_BYTE()) {
             case OP_RETURN: {
-                printValue(pop());
-                printf("\n");
                 return INTERPRET_OK;
             }
 
@@ -123,12 +125,29 @@ static InterpretResult run() {
             }
             case OP_GREATER: BINARY_OP(BOOL_VAL, >); break;
             case OP_LESS: BINARY_OP(BOOL_VAL, <); break;
+            
+            case OP_PRINT:
+                Value expr = pop();
+                printValue(expr);
+                printf("\n");
+                break;
+            
+            case OP_POP: pop(); break;
+
+            case OP_DEFINE_GLOBAL:
+            case OP_DEFINE_GLOBAL_LONG:
+                ObjString *name = instruction == OP_DEFINE_GLOBAL ? READ_STRING() : READ_STRING_LONG();
+                tableSet(&vm.globals, name, peek(0));
+                pop();
+                break;
         }
     }
 
     #undef READ_BYTE
     #undef READ_CONSTANT
     #undef READ_CONSTANT_LONG
+    #undef READ_STRING
+    #undef READ_STRING_LONG
     #undef BINARY_OP
 }
 
