@@ -31,7 +31,7 @@ typedef enum {
   PREC_PRIMARY
 } Precedence;
 
-typedef void (*ParseFn)();
+typedef void (*ParseFn)(bool canAssign);
 
 typedef struct {
   ParseFn prefix;
@@ -69,6 +69,9 @@ static void emitByte(uint8_t byte);
 // Too lazy to use emitByte() twice in a row multiple times, so we make a function that does it for us.
 static void emitBytes(uint8_t byte1, uint8_t byte2);
 
+// Emits an instruction with a 3 byte long operand.
+static void emitLongBytes(uint8_t instruction, int bytes);
+
 // Returns the current chunk.
 static Chunk *currentChunk();
 
@@ -93,27 +96,30 @@ static void expressionStatement();
 static void expression();
 
 // Emits a number instruction.
-static void number();
+static void number(bool canAssign);
 
 // Parses grouping.
-static void grouping();
+static void grouping(bool canAssign);
 
 // Parses unary negation
-static void unary();
+static void unary(bool canAssign);
 
 // Parses a binary expression.
-static void binary();
+static void binary(bool canAssign);
 
 // Parses a literal (true|false|nil).
-static void literal();
+static void literal(bool canAssign);
 
 // Parses a string.
-static void string();
+static void string(bool canAssign);
+
+// Parses/Reads a variable
+static void variable(bool canAssign);
 
 // Writes the `OP_RETURN` instruction to the current chunk.
 static void emitReturn();
 
-// Writes the `OP_CONSTANT` or `OP_CONSTANT_LONG` instruction to the current chunk.
+// Writes the OP_CONSTANT/OP_CONSTANT_LONG instruction to the current chunk.
 static void emitConstant(Value value);
 
 // Handles parsing with precedence by calling functions of equal or higher precedence.
@@ -122,7 +128,10 @@ static void parsePrecedence(Precedence precedence);
 // Consumes a variable identifier and returns the index of the constant in the constant table.
 static int parseVariable(const char *errorMessage);
 
-// Emits a OP_DEFINE_GLOBAL instruction.
+// Emits a OP_GET_GLOBAL/OP_GET_GLOBAL_LONG instruction to the current Chunk.
+static void namedVariable(Token name, bool canAssign);
+
+// Emits a OP_DEFINE_GLOBAL/OP_DEFINE_GLOBAL_LONG instruction.
 static void defineVariable(int global);
 
 // Adds the given token to the constant table (as an ObjString), and returns its index.
@@ -154,7 +163,7 @@ ParseRule rules[] = {
   [TOKEN_GREATER_EQUAL] = {NULL,     binary, PREC_COMPARISON},
   [TOKEN_LESS]          = {NULL,     binary, PREC_COMPARISON},
   [TOKEN_LESS_EQUAL]    = {NULL,     binary, PREC_COMPARISON},
-  [TOKEN_IDENTIFIER]    = {NULL,     NULL,   PREC_NONE},
+  [TOKEN_IDENTIFIER]    = {variable,     NULL,   PREC_NONE},
   [TOKEN_STRING]        = {string,   NULL,   PREC_NONE},
   [TOKEN_NUMBER]        = {number,   NULL,   PREC_NONE},
   [TOKEN_AND]           = {NULL,     NULL,   PREC_NONE},
@@ -245,6 +254,14 @@ static void emitBytes(uint8_t byte1, uint8_t byte2) {
     emitByte(byte2);
 }
 
+static void emitLongBytes(uint8_t instruction, int bytes) {
+    emitByte(instruction);
+    
+    emitByte((uint8_t)((bytes >> 16) & 0xFF));
+    emitByte((uint8_t)((bytes >> 8) & 0xFF));
+    emitByte((uint8_t)(bytes & 0xFF));
+}
+
 static void emitReturn() {
     emitByte(OP_RETURN);
 }
@@ -302,6 +319,7 @@ static void declaration() {
 static void varDeclaration() {
     int global = parseVariable("Expected variable/identifier name.");
 
+    // Emit the value instruction before the var. instruction
     if(match(TOKEN_EQUAL)) {
         expression();
     } else {
@@ -338,17 +356,17 @@ static void expression() {
     parsePrecedence(PREC_ASSIGNMENT);
 }
 
-static void number() {
+static void number(bool canAssign) {
     double value = strtod(parser.previous.start, NULL);
     emitConstant(NUMBER_VAL(value));
 }
 
-static void grouping() {
+static void grouping(bool canAssign) {
     expression();
     consume(TOKEN_RIGHT_PAREN, "Expect ')' after expression.");
 }
 
-static void unary() {
+static void unary(bool canAssign) {
     TokenType operatorType = parser.previous.type;
 
     // compile the rest of the operand
@@ -362,7 +380,7 @@ static void unary() {
     }
 }
 
-static void binary() {
+static void binary(bool canAssign) {
     TokenType operatorType = parser.previous.type;
     ParseRule *rule = getRule(operatorType);
     parsePrecedence((Precedence)(rule->precedence + 1));
@@ -382,7 +400,7 @@ static void binary() {
     }
 }
 
-static void literal() {
+static void literal(bool canAssign) {
     switch(parser.previous.type) {
         case TOKEN_FALSE: emitByte(OP_FALSE); break;
         case TOKEN_NIL: emitByte(OP_NIL); break;
@@ -391,8 +409,12 @@ static void literal() {
     }
 }
 
-static void string() {
+static void string(bool canAssign) {
     emitConstant(OBJ_VAL(copyString(parser.previous.start+1, parser.previous.length-2)));
+}
+
+static void variable(bool canAssign) {
+    namedVariable(parser.previous, canAssign);
 }
 
 static void parsePrecedence(Precedence precedence) {
@@ -405,13 +427,19 @@ static void parsePrecedence(Precedence precedence) {
         return;
     }
 
-    prefixRule();
+    bool canAssign = precedence <= PREC_ASSIGNMENT;
+    prefixRule(canAssign);
 
     // call infix rules that are at least the current precedence
     while(precedence <= getRule(parser.current.type)->precedence) {
         advance();
         ParseFn infixRule = getRule(parser.previous.type)->infix;
-        infixRule();
+        infixRule(canAssign);
+    }
+
+    // if equal is the top token, we couldn't use the infix rule properly, so they tried to assign to an invalid target.
+    if(canAssign && match(TOKEN_EQUAL)) {
+        error("Invalid assignment target.");
     }
 }
 
@@ -420,20 +448,29 @@ static int parseVariable(const char *errorMessage) {
     return identifierConstant(&parser.previous);
 }
 
+static void namedVariable(Token name, bool canAssign) {
+    int idx = identifierConstant(&name);
+
+    // todo: clean this
+    if(canAssign && match(TOKEN_EQUAL)) {
+        // If there's an equal after the variable, it's an assignment
+        expression();   
+        (idx <= 255) ? emitBytes(OP_SET_GLOBAL, (uint8_t)idx) : emitLongBytes(OP_SET_GLOBAL_LONG, idx);
+    } else {
+        (idx <= 255) ? emitBytes(OP_GET_GLOBAL, (uint8_t)idx) : emitLongBytes(OP_GET_GLOBAL_LONG, idx);
+    }
+}
+
 static void defineVariable(int global) {
     if(global <= 255) {
         emitBytes(OP_DEFINE_GLOBAL, (uint8_t)global);
     } else {
-        emitByte(OP_DEFINE_GLOBAL_LONG);
-
-        emitByte((uint8_t)((global >> 16) & 0xFF));
-        emitByte((uint8_t)((global >> 8) & 0xFF));
-        emitByte((uint8_t)(global & 0xFF));
+        emitLongBytes(OP_DEFINE_GLOBAL_LONG, global);
     }
 }
 
 static int identifierConstant(Token *name) {
-    emitConstant(OBJ_VAL(copyString(name->start, name->length)));
+    writeValueArray(&currentChunk()->constants, OBJ_VAL(copyString(name->start, name->length)));
 
     // this should work...
     return currentChunk()->constants.count-1;

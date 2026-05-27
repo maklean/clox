@@ -135,11 +135,44 @@ static InterpretResult run() {
             case OP_POP: pop(); break;
 
             case OP_DEFINE_GLOBAL:
-            case OP_DEFINE_GLOBAL_LONG:
+            case OP_DEFINE_GLOBAL_LONG: {
                 ObjString *name = instruction == OP_DEFINE_GLOBAL ? READ_STRING() : READ_STRING_LONG();
+                
+                // set global init. value as the item at the top of the stack
                 tableSet(&vm.globals, name, peek(0));
                 pop();
                 break;
+            }
+            
+            case OP_GET_GLOBAL:
+            case OP_GET_GLOBAL_LONG: {
+                ObjString *name = instruction == OP_GET_GLOBAL ? READ_STRING() : READ_STRING_LONG();
+                Value value;
+
+                // get global value
+                if(!tableGet(&vm.globals, name, &value)) {
+                    runtimeError("Undefined variable '%s'.", name->chars);
+                    return INTERPRET_RUNTIME_ERROR;
+                }
+
+                push(value);
+                break;
+            }
+
+            case OP_SET_GLOBAL:
+            case OP_SET_GLOBAL_LONG: {
+                ObjString *name = instruction == OP_SET_GLOBAL ? READ_STRING() : READ_STRING_LONG();
+
+                if(tableSet(&vm.globals, name, peek(0))) {
+                    // if true is returned, an insertion happened, so the user has peformed assignment on an undefined variable.
+                    tableDelete(&vm.globals, name);
+                    runtimeError("Undefined variable '%s'.", name->chars);
+                    
+                    return INTERPRET_RUNTIME_ERROR;
+                }
+                
+                break;
+            }
         }
     }
 

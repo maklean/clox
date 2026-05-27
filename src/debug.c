@@ -71,6 +71,14 @@ int disassembleInstruction(Chunk *chunk, int offset) {
             return constantInstruction("OP_DEFINE_GLOBAL", chunk, offset);
         case OP_DEFINE_GLOBAL_LONG:
             return constantInstruction("OP_DEFINE_GLOBAL_LONG", chunk, offset);
+        case OP_GET_GLOBAL:
+            return constantInstruction("OP_GET_GLOBAL", chunk, offset);
+        case OP_GET_GLOBAL_LONG:
+            return constantInstruction("OP_GET_GLOBAL_LONG", chunk, offset);
+        case OP_SET_GLOBAL:
+            return constantInstruction("OP_SET_GLOBAL", chunk, offset);
+        case OP_SET_GLOBAL_LONG:
+            return constantInstruction("OP_SET_GLOBAL_LONG", chunk, offset);
         default:
             printf("Unknown opcode %d\n", instruction);
             return offset + 1;
@@ -86,11 +94,16 @@ static int constantInstruction(const char *name, Chunk *chunk, int offset) {
     int constant; // constant index
     int offset_skip;
 
-    if(strcmp(name, "OP_CONSTANT") == 0 || strcmp(name, "OP_DEFINE_GLOBAL") == 0) {
+    if(
+        strcmp(name, "OP_CONSTANT") == 0 || 
+        strcmp(name, "OP_DEFINE_GLOBAL") == 0 ||
+        strcmp(name, "OP_GET_GLOBAL") == 0 ||
+        strcmp(name, "OP_SET_GLOBAL") == 0
+    ) {
         constant = chunk->code[offset+1];
         offset_skip = 2;
     } else {
-        // OP_CONSTANT_LONG/OP_DEFINE_GLOBAL_LONG get 3 bytes for index
+        // OP_CONSTANT_LONG/OP_DEFINE_GLOBAL_LONG/OP_GET_GLOBAL_LONG get 3 bytes for index
         constant = (chunk->code[offset+1] << 16) | (chunk->code[offset+2] << 8) | chunk->code[offset+3];
         offset_skip = 4;
     }
