@@ -158,7 +158,6 @@ static InterpretResult run() {
                 push(value);
                 break;
             }
-
             case OP_SET_GLOBAL:
             case OP_SET_GLOBAL_LONG: {
                 ObjString *name = instruction == OP_SET_GLOBAL ? READ_STRING() : READ_STRING_LONG();
@@ -171,6 +170,20 @@ static InterpretResult run() {
                     return INTERPRET_RUNTIME_ERROR;
                 }
                 
+                break;
+            }
+
+            case OP_GET_LOCAL:
+            case OP_GET_LOCAL_LONG: {
+                int slot = instruction == OP_GET_LOCAL ? READ_BYTE() : ((READ_BYTE() << 16) | (READ_BYTE() << 8) | READ_BYTE());
+                push(vm.stack[slot]); // the slot should match the slot in the locals array
+                break;
+            }
+            
+            case OP_SET_LOCAL:
+            case OP_SET_LOCAL_LONG: {
+                int slot = instruction == OP_SET_LOCAL ? READ_BYTE() : ((READ_BYTE() << 16) | (READ_BYTE() << 8) | READ_BYTE());
+                vm.stack[slot] = peek(0); // overwrite the value at the slot with the new value
                 break;
             }
         }

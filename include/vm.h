@@ -1,7 +1,7 @@
 #ifndef clox_vm_h
 #define clox_vm_h
 
-#define STACK_MAX 16277215
+#define STACK_MAX 65536 // uint16 limit
 
 #include "chunk.h"
 #include "value.h"
