@@ -41,7 +41,7 @@ typedef struct {
 } ParseRule;
 
 // can't use UINT24 limit since it segfaults...
-#define UINT16_COUNT 65536
+#define UINT16_COUNT (UINT16_MAX + 1)
 
 typedef struct {
     Token name;
