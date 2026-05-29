@@ -10,8 +10,11 @@ static int simpleInstruction(const char *name, int offset);
 // Displays a constant instruction to the console.
 static int constantInstruction(const char *name, Chunk *chunk, int offset);
 
-// Displays the slot number of the instruction ot the console.
+// Displays the slot number of the instruction to the console.
 static int byteInstruction(const char *name, Chunk *chunk, int offset);
+
+// Displays a jump instruction (with its operands) to the console.
+static int jumpInstruction(const char *name, int sign, Chunk *chunk, int offset);
 
 void disassembleChunk(Chunk *chunk, const char *name) {
     printf("== %s ==\n", name);
@@ -90,6 +93,10 @@ int disassembleInstruction(Chunk *chunk, int offset) {
             return byteInstruction("OP_SET_LOCAL", chunk, offset);
         case OP_SET_LOCAL_LONG:
             return byteInstruction("OP_SET_LOCAL_LONG", chunk, offset);
+        case OP_JUMP:
+            return jumpInstruction("OP_JUMP", 1, chunk, offset);
+        case OP_JUMP_IF_FALSE:
+            return jumpInstruction("OP_JUMP_IF_FALSE", 1, chunk, offset);
         default:
             printf("Unknown opcode %d\n", instruction);
             return offset + 1;
@@ -146,4 +153,11 @@ static int byteInstruction(const char *name, Chunk *chunk, int offset) {
     printf("%-16s %4d\n", name, slot);
 
     return offset+offset_skip;
+}
+
+static int jumpInstruction(const char *name, int sign, Chunk *chunk, int offset) {
+    uint16_t jump = (uint16_t)((chunk->code[offset+1] << 8) | chunk->code[offset+2]);
+    printf("%-16s %4d -> %d\n", name, offset, offset + 3 + sign * jump);
+    
+    return offset + 3;
 }

@@ -112,6 +112,9 @@ static void printStatement();
 // Parses an expression statement.
 static void expressionStatement();
 
+// Parses an if statement.
+static void ifStatement();
+
 // Parses an expression.
 static void expression();
 
@@ -150,6 +153,12 @@ static void emitReturn();
 
 // Writes the OP_CONSTANT/OP_CONSTANT_LONG instruction to the current chunk.
 static void emitConstant(Value value);
+
+// Emits a jump instruction with an offset placeholder. Returns the offset of where to begin patching.
+static int emitJump(uint8_t instruction);
+
+// Resolves/patching the operand of a jump instruction.
+static void patchJump(int offset);
 
 // Handles parsing with precedence by calling functions of equal or higher precedence.
 static void parsePrecedence(Precedence precedence);
@@ -327,6 +336,27 @@ static void emitConstant(Value value) {
     }
 }
 
+static int emitJump(uint8_t instruction) {
+    emitByte(instruction);
+    
+    // placeholder (allows for max. uint16_t jumps)
+    emitBytes(0xFF, 0xFF);
+
+    return currentChunk()->count-2;
+}
+
+static void patchJump(int offset) {
+    // calculate how many bytes to go forward from the operands if the condition if false
+    int jump = currentChunk()->count - offset - 2;
+
+    if(jump > UINT16_MAX) {
+        error("Too much code to jump over.");
+    }
+
+    currentChunk()->code[offset] = (jump >> 8) & 0xFF;
+    currentChunk()->code[offset+1] = jump & 0xFF;
+}
+
 static Chunk *currentChunk() {
     return compilingChunk;
 }
@@ -391,6 +421,8 @@ static void statement() {
         beginScope();
         block();
         endScope();
+    } else if(match(TOKEN_IF)) {
+        ifStatement();
     } else {
         // if we couldn't match with any token, it's an expression statement.
         expressionStatement();
@@ -407,6 +439,28 @@ static void expressionStatement() {
     expression();
     consume(TOKEN_SEMICOLON, "Expected ';' after an expression.");
     emitByte(OP_POP);
+}
+
+static void ifStatement() {
+    consume(TOKEN_LEFT_PAREN, "Expected '(' after 'if' keyword.");
+    expression();
+    consume(TOKEN_RIGHT_PAREN, "Expected ')' after if-statement expression.");
+
+    // jump if the condition if false
+    int thenJump = emitJump(OP_JUMP_IF_FALSE);
+    emitByte(OP_POP); // pop condition (when the condition is truthy)
+    statement();
+
+    int elseJump = emitJump(OP_JUMP);
+
+    // backpatch for the thenJump (should jump to the else block, or the code after the then block)
+    patchJump(thenJump);
+    emitByte(OP_POP); // pop condition (when the condition is truthy)
+
+    if(match(TOKEN_ELSE)) statement();
+
+    // backpatch for the elseJump (should jump over the elseBlock )
+    patchJump(elseJump);
 }
 
 static void expression() {
