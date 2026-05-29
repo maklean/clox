@@ -40,7 +40,7 @@ bool writeConstant(Chunk* chunk, Value value, int line) {
 
     int index = chunk->constants.count-1;
 
-    // Not enough space if it's over the 3 byte limit
+    // Not enough space
     if(index > UINT16_MAX) {
         return false;
     }
