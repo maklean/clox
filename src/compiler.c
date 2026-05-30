@@ -115,6 +115,15 @@ static void expressionStatement();
 // Parses an if statement.
 static void ifStatement();
 
+// Parses a while statement.
+static void whileStatement();
+
+// Parses a for statement.
+static void forStatement();
+
+// Emits a loop instruction with the given loopStart (where to jump back to) as the instruction operand.
+static void emitLoop(int loopStart);
+
 // Parses an expression.
 static void expression();
 
@@ -138,6 +147,12 @@ static void string(bool canAssign);
 
 // Parses/Reads a variable
 static void variable(bool canAssign);
+
+// Parses an 'and' keyword.
+static void and_(bool canAssign);
+
+// Parses an 'or' keyword.
+static void or_(bool canAssign);
 
 // Parses a block (all declarations between braces)
 static void block();
@@ -216,10 +231,10 @@ ParseRule rules[] = {
   [TOKEN_GREATER_EQUAL] = {NULL,     binary, PREC_COMPARISON},
   [TOKEN_LESS]          = {NULL,     binary, PREC_COMPARISON},
   [TOKEN_LESS_EQUAL]    = {NULL,     binary, PREC_COMPARISON},
-  [TOKEN_IDENTIFIER]    = {variable,     NULL,   PREC_NONE},
+  [TOKEN_IDENTIFIER]    = {variable, NULL,   PREC_NONE},
   [TOKEN_STRING]        = {string,   NULL,   PREC_NONE},
   [TOKEN_NUMBER]        = {number,   NULL,   PREC_NONE},
-  [TOKEN_AND]           = {NULL,     NULL,   PREC_NONE},
+  [TOKEN_AND]           = {NULL,     and_,   PREC_AND},
   [TOKEN_CLASS]         = {NULL,     NULL,   PREC_NONE},
   [TOKEN_ELSE]          = {NULL,     NULL,   PREC_NONE},
   [TOKEN_FALSE]         = {literal,  NULL,   PREC_NONE},
@@ -227,7 +242,7 @@ ParseRule rules[] = {
   [TOKEN_FUN]           = {NULL,     NULL,   PREC_NONE},
   [TOKEN_IF]            = {NULL,     NULL,   PREC_NONE},
   [TOKEN_NIL]           = {literal,  NULL,   PREC_NONE},
-  [TOKEN_OR]            = {NULL,     NULL,   PREC_NONE},
+  [TOKEN_OR]            = {NULL,     or_,    PREC_OR},
   [TOKEN_PRINT]         = {NULL,     NULL,   PREC_NONE},
   [TOKEN_RETURN]        = {NULL,     NULL,   PREC_NONE},
   [TOKEN_SUPER]         = {NULL,     NULL,   PREC_NONE},
@@ -423,6 +438,10 @@ static void statement() {
         endScope();
     } else if(match(TOKEN_IF)) {
         ifStatement();
+    } else if(match(TOKEN_WHILE)) {
+        whileStatement();
+    } else if(match(TOKEN_FOR)) {
+        forStatement();
     } else {
         // if we couldn't match with any token, it's an expression statement.
         expressionStatement();
@@ -461,6 +480,83 @@ static void ifStatement() {
 
     // backpatch for the elseJump (should jump over the elseBlock )
     patchJump(elseJump);
+}
+
+static void whileStatement() {
+    int loopStart = currentChunk()->count; // the offset for the condition (so we can jump back)
+
+    consume(TOKEN_LEFT_PAREN, "Expected '(' after 'while'.");
+    expression();
+    consume(TOKEN_RIGHT_PAREN, "Expected ')' after 'while' condition.");
+
+    int exitJump = emitJump(OP_JUMP_IF_FALSE);
+    emitByte(OP_POP);
+    statement();
+    emitLoop(loopStart); // emit a loop instruction if the condition is true
+
+    patchJump(exitJump);
+    emitByte(OP_POP); // pop condition and exit while-loop if condition is false.
+}
+
+static void forStatement() {
+    beginScope(); // all variables should be scoped to the for block
+
+    consume(TOKEN_LEFT_PAREN, "Expected '(' after 'for'.");
+
+    // initializer clause
+    if(match(TOKEN_SEMICOLON)) {
+        // no initializer clause
+    } else if(match(TOKEN_VAR)) {
+        varDeclaration();
+    } else {
+        expressionStatement(); // parses the expression + consumes the semicolon and the expression on the VM stack
+    }
+
+    int loopStart = currentChunk()->count;
+    int exitJump = -1;
+
+    // condition clause
+    if(!match(TOKEN_SEMICOLON)) {
+        expression();
+        consume(TOKEN_SEMICOLON, "Expected ';' after loop condition.");
+
+        exitJump = emitJump(OP_JUMP_IF_FALSE);
+        emitByte(OP_POP);
+    }
+
+    // increment clause
+    if(!match(TOKEN_RIGHT_PAREN)) {
+        int bodyJump = emitJump(OP_JUMP); // jump over the increment expression into the body
+
+        int incrementStart = currentChunk()->count;
+        expression();
+        emitByte(OP_POP);
+        consume(TOKEN_RIGHT_PAREN, "Expected ')' after increment clause.");
+
+        emitLoop(loopStart); // this should loop back to the condition clause
+        loopStart = incrementStart; // this is to make the increment expression run after the body
+        patchJump(bodyJump);
+    }
+
+    statement();
+    emitLoop(loopStart); // this should loop back to the increment expression
+
+    if(exitJump != -1) {
+        patchJump(exitJump); // jump out of the for-loop if the 
+        emitByte(OP_POP); // pop condition out
+    }
+
+    endScope();
+}
+
+static void emitLoop(int loopStart) {
+    emitByte(OP_LOOP);
+
+    int offset = currentChunk()->count - loopStart + 2;
+    if(offset > UINT16_MAX) error("Loop body is too large.");
+
+    emitByte((offset >> 8) & 0xFF);
+    emitByte(offset & 0xFF);
 }
 
 static void expression() {
@@ -526,6 +622,27 @@ static void string(bool canAssign) {
 
 static void variable(bool canAssign) {
     namedVariable(parser.previous, canAssign);
+}
+
+static void and_(bool canAssign) {
+    // emit jump to short-circuit if the condition is false
+    int endJump = emitJump(OP_JUMP_IF_FALSE);
+
+    emitByte(OP_POP); // remove condition from stack (if condition is truthy)
+    parsePrecedence(PREC_AND);
+
+    patchJump(endJump);
+}
+
+static void or_(bool canAssign) {
+    int elseJump = emitJump(OP_JUMP_IF_FALSE);
+    int endJump = emitJump(OP_JUMP);
+
+    patchJump(elseJump); // jump to RHS expression if LHS is false
+    emitByte(OP_POP); // pop LHS expression
+
+    parsePrecedence(PREC_OR);
+    patchJump(endJump); // jump outside of expression if the LHS expression is true
 }
 
 static void block() {
