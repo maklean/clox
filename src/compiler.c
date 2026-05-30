@@ -455,7 +455,7 @@ static void ifStatement() {
 
     // backpatch for the thenJump (should jump to the else block, or the code after the then block)
     patchJump(thenJump);
-    emitByte(OP_POP); // pop condition (when the condition is truthy)
+    emitByte(OP_POP); // pop condition (when the condition is falsey)
 
     if(match(TOKEN_ELSE)) statement();
 
