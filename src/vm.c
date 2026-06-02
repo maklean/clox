@@ -40,10 +40,12 @@ void freeVM() {
 }
 
 static InterpretResult run() {
-    #define READ_BYTE() (*vm.ip++)
-    #define READ_SHORT() (vm.ip += 2, (uint16_t)((vm.ip[-2] << 8) | vm.ip[-1]))
-    #define READ_CONSTANT() (vm.chunk->constants.values[READ_BYTE()])
-    #define READ_CONSTANT_LONG() (vm.chunk->constants.values[(READ_BYTE() << 16) | (READ_BYTE() << 8) | READ_BYTE()])
+    CallFrame *frame = &vm.frames[vm.frameCount-1]; // use the top-most CallFrame (currently executing function)
+
+    #define READ_BYTE() (*frame->ip++)
+    #define READ_SHORT() (frame->ip += 2, (uint16_t)((frame->ip[-2] << 8) | frame->ip[-1]))
+    #define READ_CONSTANT() (frame->function->chunk.constants.values[READ_BYTE()])
+    #define READ_CONSTANT_LONG() (frame->function->chunk.constants.values[(READ_BYTE() << 16) | (READ_BYTE() << 8) | READ_BYTE()])
     #define READ_STRING() AS_STRING(READ_CONSTANT())
     #define READ_STRING_LONG() AS_STRING(READ_CONSTANT_LONG())
     #define BINARY_OP(valueType, op) \
@@ -70,7 +72,7 @@ static InterpretResult run() {
 
             printf("\n");
 
-            disassembleInstruction(vm.chunk, (int)(vm.ip - vm.chunk->code));
+            disassembleInstruction(&frame->function->chunk, (int)(frame->ip - frame->function->chunk.code));
         #endif
 
         uint8_t instruction;
@@ -184,13 +186,13 @@ static InterpretResult run() {
             case OP_SET_LOCAL:
             case OP_SET_LOCAL_LONG: {
                 int slot = instruction == OP_SET_LOCAL ? READ_BYTE() : ((READ_BYTE() << 16) | (READ_BYTE() << 8) | READ_BYTE());
-                vm.stack[slot] = peek(0); // overwrite the value at the slot with the new value
+                frame->slots[slot] = peek(0); // overwrite the value at the slot with the new value
                 break;
             }
 
             case OP_JUMP: {
                 uint16_t offset = READ_SHORT();
-                vm.ip += offset;
+                frame->ip += offset;
                 break;
             }
             
@@ -198,13 +200,13 @@ static InterpretResult run() {
                 uint16_t offset = READ_SHORT();
                 
                 // skip then-branch if falsey
-                if(isFalsey(peek(0))) vm.ip += offset;
+                if(isFalsey(peek(0))) frame->ip += offset;
                 break;
             }
 
             case OP_LOOP: {
                 uint16_t offset = READ_SHORT();
-                vm.ip -= offset; // go backwards
+                frame->ip -= offset; // go backwards
                 break;
             }
         }
@@ -220,27 +222,25 @@ static InterpretResult run() {
 }
 
 InterpretResult interpret(const char *source) {
-    Chunk chunk;
-    initChunk(&chunk);
+    ObjFunction *function = compile(source);
+    
+    // there's been a compile-time error
+    if(function == NULL) return INTERPRET_COMPILE_ERROR;
 
-    // Compile source and write instructions into 'chunk'.
-    if(!compile(source, &chunk)) {
-        freeChunk(&chunk);
-        return INTERPRET_COMPILE_ERROR;
-    }
+    // push top-level function as the first value
+    push(OBJ_VAL(function));
 
-    // Run VM with the resulting chunk instructions.
-    vm.chunk = &chunk;
-    vm.ip = vm.chunk->code;
+    CallFrame *frame = &vm.frames[vm.frameCount++];
+    frame->function = function;
+    frame->ip = function->chunk.code;
+    frame->slots = vm.stack; // should point to the bottom of the VM stack since it's the top-level program function
 
-    InterpretResult result = run();
-
-    freeChunk(&chunk);
-    return result;
+    return run();
 }
 
 static void resetStack() {
     vm.stackTop = vm.stack;
+    vm.frameCount = 0;
 }
 
 void push(Value value) {
@@ -265,9 +265,11 @@ static void runtimeError(const char *format, ...) {
     va_end(args);
     fputs("\n", stderr);
 
-    // find instruction index in chunk and print error message
-    size_t instruction = vm.ip - vm.chunk->code - 1; 
-    int line = vm.chunk->lines[instruction];
+    // find instruction index in the latest CallFrame, and print error message
+    CallFrame* frame = &vm.frames[vm.frameCount - 1];
+    size_t instruction = frame->ip - frame->function->chunk.code - 1;
+    int line = frame->function->chunk.lines[instruction];
+
     fprintf(stderr, "[line %d] in script\n", line);
 
     resetStack();

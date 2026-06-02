@@ -1,13 +1,22 @@
 #ifndef clox_vm_h
 #define clox_vm_h
 
-#define STACK_MAX (UINT16_MAX+1) // uint16 limit
+#define FRAMES_MAX 64
+#define STACK_MAX (FRAMES_MAX * (UINT8_MAX + 1))
 
 #include "chunk.h"
 #include "value.h"
 #include "table.h"
+#include "object.h"
 
 #include <stdint.h>
+
+// Represents an ongoing function call.
+typedef struct {
+    ObjFunction *function;
+    uint8_t *ip;
+    Value *slots; // points at the bottom of the function's value stack
+} CallFrame;
 
 // Virtual machine
 typedef struct {
@@ -18,6 +27,8 @@ typedef struct {
     Obj *objects; // linked-list of all heap-allocated values
     Table strings; // for string interning
     Table globals; // for global variables
+    CallFrame frames[FRAMES_MAX];
+    int frameCount;
 } VM;
 
 typedef enum {

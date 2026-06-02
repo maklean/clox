@@ -9,7 +9,7 @@
 
 extern VM vm;
 
-// Allocates a generic `Obj` with a size of 'size' and type of `type` on the heap.
+// Allocates a generic `Obj` with a size of `size` and type of `type` on the heap.
 #define ALLOCATE_OBJ(typeSize, objType) allocateObject(typeSize, objType)
 
 // Returns a heap-allocated generic `Obj` with a size of 'size' created from `type`.
@@ -20,6 +20,19 @@ static ObjString *allocateString(char *chars, int length, uint32_t hash);
 
 // FNV-1a hashing function for strings.
 static uint32_t hashString(const char *key, int length);
+
+// Prints the given function to the console.
+static void printFunction(ObjFunction *function);
+
+ObjFunction *newFunction() {
+    ObjFunction *function = (ObjFunction *)ALLOCATE_OBJ(sizeof(ObjFunction), OBJ_FUNCTION);
+
+    function->arity = 0;
+    function->name = NULL;
+    initChunk(&function->chunk);
+
+    return function;
+}
 
 ObjString *takeString(char *chars, int length) {
     uint32_t hash = hashString(chars, length);
@@ -51,6 +64,9 @@ ObjString *copyString(const char *chars, int length) {
 
 void printObject(Value value) {
     switch(OBJ_TYPE(value)) {
+        case OBJ_FUNCTION:
+            printFunction(AS_FUNCTION(value));
+            break;
         case OBJ_STRING:
             printf("%s", AS_CSTRING(value));
             break;
@@ -88,4 +104,13 @@ static uint32_t hashString(const char *key, int length) {
     }
 
     return hash;
+}
+
+static void printFunction(ObjFunction *function) {
+    if(function->name == NULL) {
+        printf("<script>");
+        return;
+    }
+    
+    printf("<fn %s>", function->name->chars);
 }

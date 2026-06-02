@@ -33,6 +33,11 @@ void freeObjects() {
 
 static void freeObject(Obj *object) {
     switch(object->type) {
+        case OBJ_FUNCTION:
+            ObjFunction *function = (ObjFunction *)object;
+            freeChunk(&function->chunk);
+            FREE(sizeof(ObjFunction), object);
+            break;
         case OBJ_STRING:
             ObjString *str = (ObjString *)object;
             FREE_ARRAY(sizeof(char), str->chars, str->length+1);

@@ -48,8 +48,16 @@ typedef struct {
     int depth;
 } Local;
 
+typedef enum {
+    TYPE_FUNCTION, // executing code inside a function
+    TYPE_SCRIPT, // executing top-level code, i.e., the program
+} FunctionType;
+
 // Local variable state
-typedef struct {
+typedef struct Compiler {
+    struct Compiler *enclosing; // the enclosing Compiler function
+    ObjFunction *function;
+    FunctionType type;
     Local locals[UINT16_COUNT];
     int localCount;
     int scopeDepth; // current scope depth
@@ -60,7 +68,7 @@ Chunk *compilingChunk;
 Compiler* current = NULL;
 
 // Initializes the compiler state.
-static void initCompiler(Compiler *compiler);
+static void initCompiler(Compiler *compiler, FunctionType type);
 
 // Advances through the scanner's token stream. Sets the first encountered non-error token to parser.current.
 static void advance();
@@ -95,10 +103,14 @@ static void emitLongBytes(uint8_t instruction, int bytes);
 // Returns the current chunk.
 static Chunk *currentChunk();
 
-static void endCompiler();
+// Returns the implicit top-level program function.
+static ObjFunction *endCompiler();
 
 // Parses a declaration
 static void declaration();
+
+// Parses a function declaration.
+static void funDeclaration();
 
 // Parses a variable declaration.
 static void varDeclaration();
@@ -156,6 +168,9 @@ static void or_(bool canAssign);
 
 // Parses a block (all declarations between braces)
 static void block();
+
+// Parses a function body.
+static void function(FunctionType type);
 
 // Increments the global scope depth (called on entering a new scope)
 static void beginScope();
@@ -254,19 +269,32 @@ ParseRule rules[] = {
   [TOKEN_EOF]           = {NULL,     NULL,   PREC_NONE},
 };
 
-static void initCompiler(Compiler *compiler) {
+static void initCompiler(Compiler *compiler, FunctionType type) {
+    compiler->enclosing = current;
+
+    compiler->function = NULL;
+    compiler->type = type;
     compiler->localCount = 0;
     compiler->scopeDepth = 0;
+    compiler->function = newFunction();
+
     current = compiler;
+
+    if(type != TYPE_SCRIPT) {
+        // set the function's name to the most recent identifier
+        current->function->name = copyString(parser.previous.start, parser.previous.length);
+    }
+
+    Local *local = &current->locals[current->localCount++];
+    local->name.start = "";
+    local->depth = local->name.length = 0;
 }
 
-bool compile(const char *source, Chunk *chunk) {
+ObjFunction *compile(const char *source) {
     initScanner(source);
 
     Compiler compiler;
-    initCompiler(&compiler);
-    
-    compilingChunk = chunk;
+    initCompiler(&compiler, TYPE_SCRIPT);
 
     parser.hadError = false;
     parser.panicMode = false;
@@ -277,19 +305,21 @@ bool compile(const char *source, Chunk *chunk) {
         declaration();
     }
 
-    endCompiler();
-
-    return !parser.hadError;
+    ObjFunction *function = endCompiler();
+    return parser.hadError ? NULL : function;
 }
 
-static void endCompiler() {
+static ObjFunction *endCompiler() {
     emitReturn();
+    ObjFunction *function = current->function;
 
     #ifdef DEBUG_PRINT_CODE
         if(!parser.hadError) {
-            disassembleChunk(currentChunk(), "code");
+            disassembleChunk(currentChunk(), function->name != NULL ? function->name->chars : "<script>");
         }
     #endif
+
+    return function;
 }
 
 static void advance() {
@@ -373,7 +403,7 @@ static void patchJump(int offset) {
 }
 
 static Chunk *currentChunk() {
-    return compilingChunk;
+    return &current->function->chunk;
 }
 
 static void errorAtCurrent(const char *message) {
@@ -403,7 +433,9 @@ static void errorAt(Token *token, const char *message) {
 }
 
 static void declaration() {
-    if(match(TOKEN_VAR)) {
+    if(match(TOKEN_FUN)) {
+        funDeclaration();
+    } else if(match(TOKEN_VAR)) {
         varDeclaration();
     } else {
         // if it doesn't match any of the tokens above, it's a statement
@@ -412,6 +444,15 @@ static void declaration() {
 
     // Find synchronization point if we're in panic mode
     if(parser.panicMode) synchronize();
+}
+
+static void funDeclaration() {
+    // define the function as a variable
+    uint8_t global = parseVariable("Expected function name.");
+
+    markInitialized(); // this allows recursion
+    function(TYPE_FUNCTION);
+    defineVariable(global);
 }
 
 static void varDeclaration() {
@@ -654,6 +695,40 @@ static void block() {
     consume(TOKEN_RIGHT_BRACE, "Expected '}' to close block statement.");
 }
 
+static void function(FunctionType type) {
+    // each function gets their own Compiler (so we can easily track locals, nested blocks, etc.)
+    Compiler compiler;
+    initCompiler(&compiler, type);
+
+    beginScope();
+
+    consume(TOKEN_LEFT_PAREN, "Expected '(' after the function name.");
+
+    // parse parameters
+    if(!check(TOKEN_RIGHT_PAREN)) {
+        do {
+            current->function->arity++;
+            if(current->function->arity > 255) {
+                errorAtCurrent("Cannot have more than 255 parameters.");
+            }
+
+            // declare each param. as a variable (which gets a value once arguments get passed in)
+            int constant = parseVariable("Expected parameter name.");
+            defineVariable(constant);
+        } while(match(TOKEN_COMMA));
+    }
+
+    consume(TOKEN_RIGHT_PAREN, "Expected ')' after the function parameters.");
+    consume(TOKEN_LEFT_BRACE, "Expected '{' before the function body.");
+
+    block();
+
+    ObjFunction *function = endCompiler();
+
+    // emit the ObjFunction as a value so the function declaration instruction can bind to it.
+    emitConstant(OBJ_VAL(function));
+}
+
 static void beginScope() {
     current->scopeDepth++;
 }
@@ -776,6 +851,7 @@ static void addLocal(Token name) {
 }
 
 static void markInitialized() {
+    if(current->scopeDepth == 0) return;
     current->locals[current->localCount-1].depth = current->scopeDepth;
 }
 

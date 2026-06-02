@@ -3,6 +3,7 @@
 
 #include "common.h"
 #include "value.h"
+#include "chunk.h"
 
 // Returns the type of the given value
 #define OBJ_TYPE(value) (AS_OBJ(value)->type)
@@ -10,13 +11,20 @@
 // Returns whether the type of the value is a string.
 #define IS_STRING(value) isObjType(value, OBJ_STRING)
 
+// Returns whether the type of the value is a function.
+#define IS_FUNCTION(value) isObjType(value, OBJ_FUNCTION)
+
 // Returns the value as an `ObjString *`
-#define AS_STRING(value) ((ObjString*)AS_OBJ(value))
+#define AS_STRING(value) ((ObjString *)AS_OBJ(value))
 
 // Returns the characters in an `ObjString` value.
-#define AS_CSTRING(value) (((ObjString*)AS_OBJ(value))->chars)
+#define AS_CSTRING(value) (((ObjString *)AS_OBJ(value))->chars)
+
+// Returns the value as an `ObjFunction *`
+#define AS_FUNCTION(value) ((ObjFunction *)AS_OBJ(value))
 
 typedef enum {
+    OBJ_FUNCTION,
     OBJ_STRING
 } ObjType;
 
@@ -31,6 +39,16 @@ struct ObjString {
     char *chars;
     uint32_t hash;
 };
+
+typedef struct {
+    Obj obj;
+    int arity; // num. of params
+    Chunk chunk;
+    ObjString *name;
+} ObjFunction;
+
+// Heap-allocates a new `ObjFunction` struct.
+ObjFunction *newFunction();
 
 // Allocates a heap-allocated `ObjString` made from 'chars' and 'length'.
 ObjString *takeString(char *chars, int length);
