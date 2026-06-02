@@ -26,6 +26,12 @@ static bool isFalsey(Value value);
 // Concatenates the top two strings on the stack.
 static void concatenate();
 
+// Creates a new frame on the CallFrame stack, returns whether the operation was successful.
+static bool callValue(Value callee, int argCount);
+
+// Calls the given function, returns whether the call was successful.
+static bool call(ObjFunction *function, int argCount);
+
 void initVM() {
     resetStack();
     vm.objects = NULL;
@@ -209,6 +215,16 @@ static InterpretResult run() {
                 frame->ip -= offset; // go backwards
                 break;
             }
+
+            case OP_CALL: {
+                int argCount = READ_BYTE();
+                if(!callValue(peek(argCount), argCount)) {
+                    return INTERPRET_RUNTIME_ERROR;
+                }
+
+                frame = &vm.frames[vm.frameCount - 1];
+                break;
+            }
         }
     }
 
@@ -229,11 +245,7 @@ InterpretResult interpret(const char *source) {
 
     // push top-level function as the first value
     push(OBJ_VAL(function));
-
-    CallFrame *frame = &vm.frames[vm.frameCount++];
-    frame->function = function;
-    frame->ip = function->chunk.code;
-    frame->slots = vm.stack; // should point to the bottom of the VM stack since it's the top-level program function
+    call(function, 0);
 
     return run();
 }
@@ -294,4 +306,28 @@ static void concatenate() {
     ObjString *result = takeString(chars, length);
 
     push(OBJ_VAL(result));
+}
+
+static bool callValue(Value callee, int argCount) {
+    if(IS_OBJ(callee)) {
+        switch(OBJ_TYPE(callee)) {
+            case OBJ_FUNCTION:
+                return call(AS_FUNCTION(callee), argCount);
+            default:
+                break;
+        }
+    }
+
+    runtimeError("Can only call functions and classes.");
+    return false;
+}
+
+static bool call(ObjFunction *function, int argCount) {
+    CallFrame *frame = &vm.frames[vm.frameCount++];
+
+    frame->function = function;
+    frame->ip = function->chunk.code;
+    frame->slots = vm.stackTop - argCount - 1; // make it point the function statement on the stack
+
+    return true;
 }

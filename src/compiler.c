@@ -154,6 +154,9 @@ static void binary(bool canAssign);
 // Parses a literal (true|false|nil).
 static void literal(bool canAssign);
 
+// Parses a function call
+static void call(bool canAssign);
+
 // Parses a string.
 static void string(bool canAssign);
 
@@ -208,6 +211,9 @@ static void declareVariable();
 // Adds the given token to the global locals array.
 static void addLocal(Token name);
 
+// Parses the arguments passed in a function call. Returns how many arguments were parsed.
+static uint8_t argumentList();
+
 // Marks the variable at the top of the locals array as initialized (ready for usage).
 static void markInitialized();
 
@@ -227,7 +233,7 @@ static ParseRule *getRule(TokenType type);
 static void synchronize();
 
 ParseRule rules[] = {
-  [TOKEN_LEFT_PAREN]    = {grouping, NULL,   PREC_NONE},
+  [TOKEN_LEFT_PAREN]    = {grouping, call,   PREC_CALL},
   [TOKEN_RIGHT_PAREN]   = {NULL,     NULL,   PREC_NONE},
   [TOKEN_LEFT_BRACE]    = {NULL,     NULL,   PREC_NONE}, 
   [TOKEN_RIGHT_BRACE]   = {NULL,     NULL,   PREC_NONE},
@@ -657,6 +663,11 @@ static void literal(bool canAssign) {
     }
 }
 
+static void call(bool canAssign) {
+    uint8_t argCount = argumentList();
+    emitBytes(OP_CALL, argCount);
+}
+
 static void string(bool canAssign) {
     emitConstant(OBJ_VAL(copyString(parser.previous.start+1, parser.previous.length-2)));
 }
@@ -848,6 +859,26 @@ static void addLocal(Token name) {
 
     local->name = name;
     local->depth = -1;
+}
+
+static uint8_t argumentList() {
+    uint8_t argCount = 0;
+
+    // parse arguments seperated by commas until we reach the end
+    if(!check(TOKEN_RIGHT_PAREN)) {
+        do {
+            expression();
+
+            if(argCount == 255) {
+                error("Can't have more than 255 arguments.");
+            }
+
+            argCount++;
+        } while(match(TOKEN_COMMA));
+    }
+
+    consume(TOKEN_RIGHT_PAREN, "Expected ')' after arguments.");
+    return argCount;
 }
 
 static void markInitialized() {
