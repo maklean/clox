@@ -133,6 +133,9 @@ static void whileStatement();
 // Parses a for statement.
 static void forStatement();
 
+// Parses a return statement.
+static void returnStatement();
+
 // Emits a loop instruction with the given loopStart (where to jump back to) as the instruction operand.
 static void emitLoop(int loopStart);
 
@@ -325,6 +328,8 @@ static ObjFunction *endCompiler() {
         }
     #endif
 
+    current = current->enclosing;
+
     return function;
 }
 
@@ -376,6 +381,7 @@ static void emitLongBytes(uint8_t instruction, int bytes) {
 }
 
 static void emitReturn() {
+    emitByte(OP_NIL);
     emitByte(OP_RETURN);
 }
 
@@ -489,6 +495,8 @@ static void statement() {
         whileStatement();
     } else if(match(TOKEN_FOR)) {
         forStatement();
+    } else if(match(TOKEN_RETURN)) {
+        returnStatement();
     } else {
         // if we couldn't match with any token, it's an expression statement.
         expressionStatement();
@@ -594,6 +602,22 @@ static void forStatement() {
     }
 
     endScope();
+}
+
+static void returnStatement() {
+    if(current->type == TYPE_SCRIPT) {
+        error("Can't return from top-level code.");
+    }
+
+    if(match(TOKEN_SEMICOLON)) {
+        // emit NIL and return
+        emitReturn();
+    } else {
+        // emit return value and return
+        expression();
+        consume(TOKEN_SEMICOLON, "Expected ';' after return value.");
+        emitByte(OP_RETURN);
+    }
 }
 
 static void emitLoop(int loopStart) {

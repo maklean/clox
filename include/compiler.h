@@ -7,6 +7,6 @@
 #include <stdbool.h>
 
 // Compiles the source code and inserts the bytecode instructions into the returned top-level function. Returns `NULL` if a compile-error occurred.
-ObjFunction *compile(const char* source);
+ObjFunction *compile(const char *source);
 
 #endif

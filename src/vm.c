@@ -85,7 +85,20 @@ static InterpretResult run() {
 
         switch(instruction = READ_BYTE()) {
             case OP_RETURN: {
-                return INTERPRET_OK;
+                Value result = pop();
+                vm.frameCount--;
+
+                // it was the top-level function CallFrame we just removed, the program is done.
+                if(vm.frameCount == 0) {
+                    pop();
+                    return INTERPRET_OK;
+                }
+
+                // go back to the previous CallFrame with the returned (popped) value
+                vm.stackTop = frame->slots;
+                push(result);
+                frame = &vm.frames[vm.frameCount - 1];
+                break;
             }
 
             case OP_CONSTANT:
@@ -185,7 +198,7 @@ static InterpretResult run() {
             case OP_GET_LOCAL:
             case OP_GET_LOCAL_LONG: {
                 int slot = instruction == OP_GET_LOCAL ? READ_BYTE() : ((READ_BYTE() << 16) | (READ_BYTE() << 8) | READ_BYTE());
-                push(vm.stack[slot]); // the slot should match the slot in the locals array
+                push(frame->slots[slot]); // the slot should match the slot in the locals array
                 break;
             }
             
@@ -277,12 +290,20 @@ static void runtimeError(const char *format, ...) {
     va_end(args);
     fputs("\n", stderr);
 
-    // find instruction index in the latest CallFrame, and print error message
-    CallFrame* frame = &vm.frames[vm.frameCount - 1];
-    size_t instruction = frame->ip - frame->function->chunk.code - 1;
-    int line = frame->function->chunk.lines[instruction];
+    // find instruction index in each CallFrame, and print error message
+    for(int i = vm.frameCount-1; i >= 0; i--) {
+        CallFrame *frame = &vm.frames[i];
+        ObjFunction *function = frame->function;
+        size_t instruction = frame->ip - function->chunk.code - 1;
 
-    fprintf(stderr, "[line %d] in script\n", line);
+        fprintf(stderr, "[line %d] in ", function->chunk.lines[instruction]);
+
+        if(function->name == NULL) {
+            fprintf(stderr, "script\n");
+        } else {
+            fprintf(stderr, "%s()\n", function->name->chars);
+        }
+    }
 
     resetStack();
 }
@@ -323,6 +344,16 @@ static bool callValue(Value callee, int argCount) {
 }
 
 static bool call(ObjFunction *function, int argCount) {
+    if(argCount != function->arity) {
+        runtimeError("Expected %d arguments, got %d.", function->arity, argCount);
+        return false;
+    }
+
+    if(vm.frameCount == FRAMES_MAX) {
+        runtimeError("Stack overflow.");
+        return false;
+    }
+
     CallFrame *frame = &vm.frames[vm.frameCount++];
 
     frame->function = function;

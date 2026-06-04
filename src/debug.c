@@ -145,7 +145,8 @@ static int byteInstruction(const char *name, Chunk *chunk, int offset) {
 
     if(
         strcmp(name, "OP_GET_LOCAL") == 0 || 
-        strcmp(name, "OP_SET_LOCAL") == 0
+        strcmp(name, "OP_SET_LOCAL") == 0 ||
+        strcmp(name, "OP_CALL") == 0
     ) {
         slot = chunk->code[offset+1];
         offset_skip = 2;
