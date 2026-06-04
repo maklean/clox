@@ -8,8 +8,12 @@
 #include <stdio.h>
 #include <stdarg.h>
 #include <string.h>
+#include <time.h>
 
 VM vm;
+
+// Native function that returns the current elapsed time since the program started running.
+static Value clockNative(int argCount, Value *args);
 
 static InterpretResult run();
 static void resetStack();
@@ -32,11 +36,24 @@ static bool callValue(Value callee, int argCount);
 // Calls the given function, returns whether the call was successful.
 static bool call(ObjFunction *function, int argCount);
 
+// Creates a native function
+static void defineNative(const char *name, NativeFn function) {
+    push(OBJ_VAL(copyString(name, (int)strlen(name))));
+    push(OBJ_VAL(newNative(function)));
+    tableSet(&vm.globals, AS_STRING(vm.stack[0]), vm.stack[1]);
+
+    // pop both off the stack so the GC doesn't clean it up
+    pop();
+    pop();
+}
+
 void initVM() {
     resetStack();
     vm.objects = NULL;
     initTable(&vm.strings);
     initTable(&vm.globals);
+
+    defineNative("clock", clockNative);
 }
 
 void freeVM() {
@@ -334,6 +351,15 @@ static bool callValue(Value callee, int argCount) {
         switch(OBJ_TYPE(callee)) {
             case OBJ_FUNCTION:
                 return call(AS_FUNCTION(callee), argCount);
+            case OBJ_NATIVE:
+                NativeFn native = AS_NATIVE(callee);
+
+                // execute native function then move back to position before the arguments
+                Value result = native(argCount, vm.stackTop - argCount);
+                vm.stackTop -= argCount + 1;
+
+                push(result);
+                return true;
             default:
                 break;
         }
@@ -361,4 +387,8 @@ static bool call(ObjFunction *function, int argCount) {
     frame->slots = vm.stackTop - argCount - 1; // make it point the function statement on the stack
 
     return true;
+}
+
+static Value clockNative(int argCount, Value *args) {
+    return NUMBER_VAL((double)clock() / CLOCKS_PER_SEC);
 }

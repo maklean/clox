@@ -14,6 +14,9 @@
 // Returns whether the type of the value is a function.
 #define IS_FUNCTION(value) isObjType(value, OBJ_FUNCTION)
 
+// Returns whether the type of the value is a native function.
+#define IS_NATIVE(value) isObjType(value, OBJ_NATIVE)
+
 // Returns the value as an `ObjString *`
 #define AS_STRING(value) ((ObjString *)AS_OBJ(value))
 
@@ -23,9 +26,13 @@
 // Returns the value as an `ObjFunction *`
 #define AS_FUNCTION(value) ((ObjFunction *)AS_OBJ(value))
 
+// Returns the function pointed to by an `ObjNative *`.
+#define AS_NATIVE(value) (((ObjNative *)AS_OBJ(value))->function)
+
 typedef enum {
     OBJ_FUNCTION,
-    OBJ_STRING
+    OBJ_STRING,
+    OBJ_NATIVE,
 } ObjType;
 
 struct Obj {
@@ -47,8 +54,18 @@ typedef struct {
     ObjString *name;
 } ObjFunction;
 
+typedef Value (*NativeFn)(int argCount, Value *args);
+
+typedef struct {
+    Obj obj;
+    NativeFn function;
+} ObjNative;
+
 // Heap-allocates a new `ObjFunction` struct.
 ObjFunction *newFunction();
+
+// Heap-allocates a new `ObjNative` struct.
+ObjNative *newNative(NativeFn function);
 
 // Allocates a heap-allocated `ObjString` made from 'chars' and 'length'.
 ObjString *takeString(char *chars, int length);
