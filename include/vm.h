@@ -13,7 +13,7 @@
 
 // Represents an ongoing function call.
 typedef struct {
-    ObjFunction *function;
+    ObjClosure *closure;
     uint8_t *ip;
     Value *slots; // points at the bottom of the function's value stack
 } CallFrame;

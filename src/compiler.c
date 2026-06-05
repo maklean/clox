@@ -761,7 +761,14 @@ static void function(FunctionType type) {
     ObjFunction *function = endCompiler();
 
     // emit the ObjFunction as a value so the function declaration instruction can bind to it.
-    emitConstant(OBJ_VAL(function));
+    int index = currentChunk()->constants.count;
+    writeValueArray(&currentChunk()->constants, OBJ_VAL(function));
+
+    if(index <= 255) {
+        emitBytes(OP_CLOSURE, (uint8_t)index);
+    } else {
+        emitLongBytes(OP_CLOSURE_LONG, index);
+    }
 }
 
 static void beginScope() {

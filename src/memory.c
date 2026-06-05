@@ -46,5 +46,9 @@ static void freeObject(Obj *object) {
         case OBJ_NATIVE:
             FREE(sizeof(ObjNative), object);
             break;
+        case OBJ_CLOSURE:
+            // only free closure obj b/c other closures could be referring to the same underlying function.
+            FREE(sizeof(ObjClosure), object);
+            break;
     }
 }

@@ -14,6 +14,9 @@
 // Returns whether the type of the value is a function.
 #define IS_FUNCTION(value) isObjType(value, OBJ_FUNCTION)
 
+// Returns whether the type of the value is a closure.
+#define IS_CLOSURE(value) isObjType(value, OBJ_CLOSURE)
+
 // Returns whether the type of the value is a native function.
 #define IS_NATIVE(value) isObjType(value, OBJ_NATIVE)
 
@@ -26,6 +29,9 @@
 // Returns the value as an `ObjFunction *`
 #define AS_FUNCTION(value) ((ObjFunction *)AS_OBJ(value))
 
+// Returns the value as an `ObjClosure *`
+#define AS_CLOSURE(value) ((ObjClosure*)AS_OBJ(value))
+
 // Returns the function pointed to by an `ObjNative *`.
 #define AS_NATIVE(value) (((ObjNative *)AS_OBJ(value))->function)
 
@@ -33,6 +39,7 @@ typedef enum {
     OBJ_FUNCTION,
     OBJ_STRING,
     OBJ_NATIVE,
+    OBJ_CLOSURE,
 } ObjType;
 
 struct Obj {
@@ -54,6 +61,11 @@ typedef struct {
     ObjString *name;
 } ObjFunction;
 
+typedef struct {
+    Obj obj;
+    ObjFunction *function;
+} ObjClosure;
+
 typedef Value (*NativeFn)(int argCount, Value *args);
 
 typedef struct {
@@ -66,6 +78,9 @@ ObjFunction *newFunction();
 
 // Heap-allocates a new `ObjNative` struct.
 ObjNative *newNative(NativeFn function);
+
+// Heap-allocates a new `ObjClosure` struct.
+ObjClosure *newClosure(ObjFunction *function);
 
 // Allocates a heap-allocated `ObjString` made from 'chars' and 'length'.
 ObjString *takeString(char *chars, int length);
