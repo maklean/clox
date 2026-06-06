@@ -25,6 +25,7 @@ typedef struct {
     Value stack[STACK_MAX];
     Value *stackTop; // points to where the next pushed value goes
     Obj *objects; // linked-list of all heap-allocated values
+    ObjUpvalue *openUpvalues; // linked-list of open upvalues
     Table strings; // for string interning
     Table globals; // for global variables
     CallFrame frames[FRAMES_MAX];

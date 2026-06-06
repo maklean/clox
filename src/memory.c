@@ -47,8 +47,12 @@ static void freeObject(Obj *object) {
             FREE(sizeof(ObjNative), object);
             break;
         case OBJ_CLOSURE:
-            // only free closure obj b/c other closures could be referring to the same underlying function.
+            ObjClosure *closure = (ObjClosure *)object;
+            FREE_ARRAY(sizeof(ObjClosure *), closure->upvalues, closure->upvalueCount);
             FREE(sizeof(ObjClosure), object);
+            break;
+        case OBJ_UPVALUE:
+            FREE(sizeof(ObjUpvalue), object);
             break;
     }
 }

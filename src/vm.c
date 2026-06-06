@@ -33,6 +33,12 @@ static void concatenate();
 // Creates a new frame on the CallFrame stack, returns whether the operation was successful.
 static bool callValue(Value callee, int argCount);
 
+// Wraps the given value in an ObjUpvalue.
+static ObjUpvalue *captureUpvalue(Value *local);
+
+// Moves a local variable from the stack onto the heap.
+static void closeUpvalues(Value *last);
+
 // Calls the given function, returns whether the call was successful.
 static bool call(ObjClosure *closure, int argCount);
 
@@ -103,6 +109,7 @@ static InterpretResult run() {
         switch(instruction = READ_BYTE()) {
             case OP_RETURN: {
                 Value result = pop();
+                closeUpvalues(frame->slots);
                 vm.frameCount--;
 
                 // it was the top-level function CallFrame we just removed, the program is done.
@@ -264,8 +271,50 @@ static InterpretResult run() {
                 // wrap in closure
                 ObjClosure *closure = newClosure(function);
                 push(OBJ_VAL(closure));
+
+                for(int i = 0; i < closure->upvalueCount; i++) {
+                    uint8_t isLocal = READ_BYTE();
+                    bool isLongIndex = isLocal & 2;
+                    isLocal &= 1;
+
+                    int index;
+                    if(isLongIndex) {
+                        int b1 = READ_BYTE();
+                        int b2 = READ_BYTE();
+                        int b3 = READ_BYTE();
+                        index = (b1 << 16) | (b2 << 8) | b3;
+                    } else {
+                        index = READ_BYTE();
+                    }
+
+                    if(isLocal) {
+                        closure->upvalues[i] = captureUpvalue(frame->slots + index);
+                    } else {
+                        closure->upvalues[i] = frame->closure->upvalues[index];
+                    }
+                }
                 break;
             }
+
+            case OP_GET_UPVALUE: 
+            case OP_GET_UPVALUE_LONG: {
+                int slot = instruction == OP_GET_UPVALUE ? READ_BYTE() : ((READ_BYTE() << 16) | (READ_BYTE() << 8) | READ_BYTE());
+                push(*frame->closure->upvalues[slot]->location);
+                break;
+            }
+
+            case OP_SET_UPVALUE:
+            case OP_SET_UPVALUE_LONG: {
+                int slot = instruction == OP_SET_UPVALUE ? READ_BYTE() : ((READ_BYTE() << 16) | (READ_BYTE() << 8) | READ_BYTE());
+                *frame->closure->upvalues[slot]->location = peek(0);
+                break;
+            }
+
+            case OP_CLOSE_UPVALUE:
+                // variable-to-be-hoisted should be at the top of the stack
+                closeUpvalues(vm.stackTop-1);
+                pop();
+                break;
         }
     }
 
@@ -298,6 +347,7 @@ InterpretResult interpret(const char *source) {
 static void resetStack() {
     vm.stackTop = vm.stack;
     vm.frameCount = 0;
+    vm.openUpvalues = NULL;
 }
 
 void push(Value value) {
@@ -382,6 +432,45 @@ static bool callValue(Value callee, int argCount) {
 
     runtimeError("Can only call functions and classes.");
     return false;
+}
+
+static ObjUpvalue *captureUpvalue(Value *local) {
+    ObjUpvalue *prevUpvalue = NULL, *upvalue = vm.openUpvalues;
+
+    // try to find existing upvalue for local
+    while(upvalue != NULL && upvalue->location > local) {
+        prevUpvalue = upvalue;
+        upvalue = upvalue->next;
+    }
+
+    // found existing upvalue, use that instead of creating new one
+    if(upvalue != NULL && upvalue->location == local) {
+        return upvalue;
+    }
+
+    ObjUpvalue *createdUpvalue = newUpvalue(local);
+    createdUpvalue->next = upvalue;
+
+    if(prevUpvalue == NULL) {
+        vm.openUpvalues = createdUpvalue;
+    } else {
+        prevUpvalue->next = createdUpvalue;
+    }
+
+    return createdUpvalue;
+}
+
+static void closeUpvalues(Value *last) {
+    // we use address comparison to only deal with variables that are in the list.
+    while(vm.openUpvalues != NULL && vm.openUpvalues->location >= last) {
+        ObjUpvalue* upvalue = vm.openUpvalues;
+
+        // move the value onto the heap by copying it into closed
+        upvalue->closed = *upvalue->location;
+        upvalue->location = &upvalue->closed; // this is so OP_GET/SET_UPVALUE can continue working with whatever's at *upvalue->location
+
+        vm.openUpvalues = upvalue->next;
+    }
 }
 
 static bool call(ObjClosure* closure, int argCount) {

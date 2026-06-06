@@ -39,6 +39,7 @@ typedef enum {
     OBJ_FUNCTION,
     OBJ_STRING,
     OBJ_NATIVE,
+    OBJ_UPVALUE,
     OBJ_CLOSURE,
 } ObjType;
 
@@ -54,9 +55,17 @@ struct ObjString {
     uint32_t hash;
 };
 
+typedef struct ObjUpvalue {
+    Obj obj;
+    Value *location;
+    Value closed;
+    struct ObjUpvalue *next;
+} ObjUpvalue;
+
 typedef struct {
     Obj obj;
     int arity; // num. of params
+    int upvalueCount;
     Chunk chunk;
     ObjString *name;
 } ObjFunction;
@@ -64,6 +73,8 @@ typedef struct {
 typedef struct {
     Obj obj;
     ObjFunction *function;
+    ObjUpvalue **upvalues;
+    int upvalueCount;
 } ObjClosure;
 
 typedef Value (*NativeFn)(int argCount, Value *args);
@@ -81,6 +92,9 @@ ObjNative *newNative(NativeFn function);
 
 // Heap-allocates a new `ObjClosure` struct.
 ObjClosure *newClosure(ObjFunction *function);
+
+// Heap-allocates a new `ObjUpvalue` struct.
+ObjUpvalue *newUpvalue(Value *slot);
 
 // Allocates a heap-allocated `ObjString` made from 'chars' and 'length'.
 ObjString *takeString(char *chars, int length);

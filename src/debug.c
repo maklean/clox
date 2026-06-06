@@ -1,5 +1,6 @@
 #include "../include/debug.h"
 #include "../include/value.h"
+#include "../include/object.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -93,6 +94,14 @@ int disassembleInstruction(Chunk *chunk, int offset) {
             return byteInstruction("OP_SET_LOCAL", chunk, offset);
         case OP_SET_LOCAL_LONG:
             return byteInstruction("OP_SET_LOCAL_LONG", chunk, offset);
+        case OP_GET_UPVALUE:
+            return byteInstruction("OP_GET_UPVALUE", chunk, offset);
+        case OP_GET_UPVALUE_LONG:
+            return byteInstruction("OP_GET_UPVALUE_LONG", chunk, offset);
+        case OP_SET_UPVALUE:
+            return byteInstruction("OP_SET_UPVALUE", chunk, offset);
+        case OP_SET_UPVALUE_LONG:
+            return byteInstruction("OP_SET_UPVALUE_LONG", chunk, offset);
         case OP_JUMP:
             return jumpInstruction("OP_JUMP", 1, chunk, offset);
         case OP_JUMP_IF_FALSE:
@@ -118,8 +127,28 @@ int disassembleInstruction(Chunk *chunk, int offset) {
             printValue(chunk->constants.values[constant]);
             printf("\n");
 
+            ObjFunction *function = AS_FUNCTION(chunk->constants.values[constant]);
+            for(int j = 0; j < function->upvalueCount; j++) {
+                int isLocal = chunk->code[offset++];
+
+                bool isLongIndex = isLocal & 2;
+                isLocal &= 1;
+
+                int index;
+                if(isLongIndex) {
+                    index = (chunk->code[offset] << 16) | (chunk->code[offset+1] << 8) | chunk->code[offset+2];
+                    offset += 3;
+                } else {
+                    index = chunk->code[offset++];
+                }
+
+                printf("%04d      |                     %s %d\n", offset - (isLongIndex ? 4 : 2), isLocal ? "local" : "upvalue", index);
+            }
+
             return offset;
         }
+        case OP_CLOSE_UPVALUE:
+            return simpleInstruction("OP_CLOSE_UPVALUE", offset);
         default:
             printf("Unknown opcode %d\n", instruction);
             return offset + 1;
@@ -165,7 +194,9 @@ static int byteInstruction(const char *name, Chunk *chunk, int offset) {
     if(
         strcmp(name, "OP_GET_LOCAL") == 0 || 
         strcmp(name, "OP_SET_LOCAL") == 0 ||
-        strcmp(name, "OP_CALL") == 0
+        strcmp(name, "OP_CALL") == 0 ||
+        strcmp(name, "OP_GET_UPVALUE") == 0 ||
+        strcmp(name, "OP_SET_UPVALUE") == 0
     ) {
         slot = chunk->code[offset+1];
         offset_skip = 2;
