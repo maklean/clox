@@ -56,6 +56,10 @@ static void defineNative(const char *name, NativeFn function) {
 void initVM() {
     resetStack();
     vm.objects = NULL;
+
+    vm.grayCount = vm.grayCapacity = 0;
+    vm.grayStack = NULL;
+
     initTable(&vm.strings);
     initTable(&vm.globals);
 
@@ -451,6 +455,7 @@ static ObjUpvalue *captureUpvalue(Value *local) {
     ObjUpvalue *createdUpvalue = newUpvalue(local);
     createdUpvalue->next = upvalue;
 
+    // add upvalue to openUpvalues list
     if(prevUpvalue == NULL) {
         vm.openUpvalues = createdUpvalue;
     } else {

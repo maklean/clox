@@ -1,14 +1,41 @@
 #include "../include/memory.h"
 #include "../include/object.h"
 #include "../include/vm.h"
+#include "../include/compiler.h"
 
 #include <stdlib.h>
 
+#ifdef DEBUG_LOG_GC
+    #include "../include/debug.h"
+
+    #include <stdio.h>
+#endif
+
 extern VM vm;
 
+// Frees the given Object.
 static void freeObject(Obj *object);
 
+// Marks all roots (locals & temporaries on the VM stack, globals, compiler ObjFunction, etc.).
+static void markRoots();
+
+// Traverses through the stack of gray objects to color their references.
+static void traceReferences();
+
+// Goes through all references from the given object and marks them, then it blackens the object.
+static void blackenObject(Obj *object);
+
+// Marks all the values in the given array.
+static void markArray(ValueArray *array);
+
 void *reallocate(void *pointer, size_t oldSize, size_t newSize) {
+    if(newSize > oldSize) {
+        #ifdef DEBUG_STRESS_GC
+            // trigger GC for every new allocated piece of memory
+            collectGarbage();
+        #endif
+    }
+
     if(newSize == 0) {
         free(pointer);
         return NULL;
@@ -29,9 +56,57 @@ void freeObjects() {
         freeObject(object);
         object = next;    
     }
+
+    free(vm.grayStack);
+}
+
+void collectGarbage() {
+    #ifdef DEBUG_LOG_GC
+        printf("-- gc begin\n");
+    #endif
+
+    markRoots();
+    traceReferences();
+
+    #ifdef DEBUG_LOG_GC
+        printf("-- gc end\n");
+    #endif
+}
+
+void markValue(Value value) {
+    // we don't need to mark any integers, booleans, or nil since their data stored in the Value struct directly.
+    if(IS_OBJ(value)) {
+        markObject(AS_OBJ(value));
+    }
+}
+
+void markObject(Obj *object) {
+    if(object == NULL || object->isMarked) return;
+
+    #ifdef DEBUG_LOG_GC
+        printf("%p mark ", (void*)object);
+        printValue(OBJ_VAL(object));
+        printf("\n");
+    #endif
+
+    object->isMarked = true;
+
+    // resize grayStack if needed
+    if(vm.grayCount == vm.grayCapacity) {
+        vm.grayCapacity = GROW_CAPACITY(vm.grayCapacity);
+        vm.grayStack = (Obj **)realloc(vm.grayStack, sizeof(Obj *) * vm.grayCapacity);
+    }
+
+    vm.grayStack[vm.grayCount++] = object;
+
+    if(vm.grayStack == NULL) exit(1);
 }
 
 static void freeObject(Obj *object) {
+    #ifdef DEBUG_LOG_GC
+        printf("%p free type %d\n", (void*)object, object->type);
+    #endif
+
     switch(object->type) {
         case OBJ_FUNCTION:
             ObjFunction *function = (ObjFunction *)object;
@@ -54,5 +129,81 @@ static void freeObject(Obj *object) {
         case OBJ_UPVALUE:
             FREE(sizeof(ObjUpvalue), object);
             break;
+    }
+}
+
+static void markRoots() {
+    // Mark all locals & temporaries on the VM stack
+    for(Value *slot = vm.stack; slot < vm.stackTop; slot++) {
+        markValue(*slot);
+    }
+
+    // mark globals
+    markTable(&vm.globals);
+
+    // mark heap-allocated memory used by the compiler
+    markCompilerRoots();
+
+    // mark the closures that live on the CallFrame array
+    for(int i = 0; i < vm.frameCount; i++) {
+        markObject((Obj *)vm.frames[i].closure);
+    }
+
+    // mark open upvalues
+    for(ObjUpvalue *upvalue = vm.openUpvalues; upvalue != NULL; upvalue = upvalue->next) {
+        markObject((Obj *)upvalue);
+    }
+}
+
+static void traceReferences() {
+    while(vm.grayCount > 0) {
+        Obj *object = vm.grayStack[--vm.grayCount];
+        blackenObject(object);
+    }
+}
+
+static void blackenObject(Obj *object) {
+    #ifdef DEBUG_LOG_GC
+        printf("%p blacken ", (void*)object);
+        printValue(OBJ_VAL(object));
+        printf("\n");
+    #endif
+
+    switch(object->type) {
+        case OBJ_FUNCTION: {
+            ObjFunction *function = (ObjFunction *)object;
+
+            // mark function ObjString name and values in constant pool
+            markObject((Obj *)function->name);
+            markArray(&function->chunk.constants);
+
+            break;
+        }
+
+        case OBJ_UPVALUE:
+            markValue(((ObjUpvalue *)object)->closed);
+            break;
+        
+        case OBJ_CLOSURE: {
+            ObjClosure *closure = (ObjClosure *)object;
+            
+            // mark function wrapped by closure, and upvalues
+            markObject((Obj *)closure->function);
+            for(int i = 0; i < closure->upvalueCount; i++) {
+                markObject((Obj *)closure->upvalues[i]);
+            }
+
+            break;
+        }
+
+        case OBJ_NATIVE:
+        case OBJ_STRING:
+            break;
+    }
+}
+
+static void markArray(ValueArray *array) {
+    for(int i = 0; i < array->count; i++) {
+        markValue(array->values[i]);
     }
 }

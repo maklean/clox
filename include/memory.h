@@ -1,6 +1,7 @@
 #ifndef clox_memory_h
 #define clox_memory_h
 
+#include "value.h"
 #include "common.h"
 
 // Double capacity if it's >= to 8, otherwise, default to 8.
@@ -25,5 +26,14 @@ void *reallocate(void *pointer, size_t oldSize, size_t newSize);
 
 // Frees all the objects in the VM's linked-list.
 void freeObjects();
+
+// Frees all unreachable objects on the heap.
+void collectGarbage();
+
+// Marks the given value (if it's an object).
+void markValue(Value value);
+
+// Marks the given object.
+void markObject(Obj *object);
 
 #endif

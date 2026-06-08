@@ -37,4 +37,7 @@ void tableAddAll(Table *from, Table *to);
 // Attempts to find the 
 ObjString *tableFindString(Table *table, const char *chars, int length, uint32_t hash);
 
+// Marks all variables stored in the table.
+void markTable(Table *table);
+
 #endif

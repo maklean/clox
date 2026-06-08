@@ -1,6 +1,7 @@
 #include "../include/common.h"
 #include "../include/compiler.h"
 #include "../include/scanner.h"
+#include "../include/memory.h"
 
 #ifdef DEBUG_PRINT_CODE
 #include "../include/debug.h"
@@ -330,6 +331,16 @@ ObjFunction *compile(const char *source) {
 
     ObjFunction *function = endCompiler();
     return parser.hadError ? NULL : function;
+}
+
+void markCompilerRoots() {
+    Compiler *compiler = current;
+
+    // traverse through every compiler and mark their ObjFunction
+    while(compiler != NULL) {
+        markObject((Obj *)compiler->function);
+        compiler = compiler->enclosing;
+    }
 }
 
 static ObjFunction *endCompiler() {
