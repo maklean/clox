@@ -22,18 +22,31 @@ static void markRoots();
 // Traverses through the stack of gray objects to color their references.
 static void traceReferences();
 
+// Cleans up all white (unused) objects from the heap.
+static void sweep();
+
 // Goes through all references from the given object and marks them, then it blackens the object.
 static void blackenObject(Obj *object);
 
 // Marks all the values in the given array.
 static void markArray(ValueArray *array);
 
+// Multiplier for next GC threshold
+#define GC_HEAP_GROW_FACTOR 2
+
 void *reallocate(void *pointer, size_t oldSize, size_t newSize) {
+    vm.bytesAllocated += newSize - oldSize;
+
     if(newSize > oldSize) {
         #ifdef DEBUG_STRESS_GC
-            // trigger GC for every new allocated piece of memory
+            // trigger GC for every new allocated piece of memory if stress test is on
             collectGarbage();
         #endif
+
+        if(vm.bytesAllocated > vm.nextGC) {
+            // if we've reached the bytes allocated threshold, we should exit.
+            collectGarbage();
+        }
     }
 
     if(newSize == 0) {
@@ -65,12 +78,22 @@ void collectGarbage() {
         printf("-- gc begin\n");
     #endif
 
+    size_t before = vm.bytesAllocated;
+
     markRoots();
     traceReferences();
+    sweep();
+
+    // set next threshold.
+    vm.nextGC = vm.bytesAllocated * GC_HEAP_GROW_FACTOR;
 
     #ifdef DEBUG_LOG_GC
         printf("-- gc end\n");
     #endif
+
+    printf("   collected %zu bytes (from %zu to %zu) next at %zu\n",
+        before - vm.bytesAllocated, before, vm.bytesAllocated,
+        vm.nextGC);
 }
 
 void markValue(Value value) {
@@ -159,6 +182,33 @@ static void traceReferences() {
     while(vm.grayCount > 0) {
         Obj *object = vm.grayStack[--vm.grayCount];
         blackenObject(object);
+    }
+}
+
+static void sweep() {
+    Obj *previous = NULL;
+    Obj *object = vm.objects;
+
+    while(object != NULL) {
+        if(object->isMarked) {
+            object->isMarked = false; // reset for next mark & sweep
+
+            // if the object is marked, go to the next object in the list
+            previous = object;
+            object = object->next;
+        } else {
+            Obj *unreached = object;
+            object = object->next;
+
+            // if the object isn't marked, delete the node in the linked-list & free the object
+            if(previous != NULL) {
+                previous->next = object;
+            } else {
+                vm.objects = object;
+            }
+
+            freeObject(unreached);
+        }
     }
 }
 

@@ -317,8 +317,8 @@ static void initCompiler(Compiler *compiler, FunctionType type) {
 ObjFunction *compile(const char *source) {
     initScanner(source);
 
-    Compiler compiler;
-    initCompiler(&compiler, TYPE_SCRIPT);
+    Compiler *compiler = malloc(sizeof(Compiler)); // have to heap-allocate since we support a larger amount of locals and upvalues
+    initCompiler(compiler, TYPE_SCRIPT);
 
     parser.hadError = false;
     parser.panicMode = false;
@@ -330,6 +330,8 @@ ObjFunction *compile(const char *source) {
     }
 
     ObjFunction *function = endCompiler();
+    free(compiler);
+
     return parser.hadError ? NULL : function;
 }
 
@@ -757,8 +759,8 @@ static void block() {
 
 static void function(FunctionType type) {
     // each function gets their own Compiler (so we can easily track locals, nested blocks, etc.)
-    Compiler compiler;
-    initCompiler(&compiler, type);
+    Compiler *compiler = malloc(sizeof(Compiler));
+    initCompiler(compiler, type);
 
     beginScope();
 
@@ -796,10 +798,10 @@ static void function(FunctionType type) {
     }
 
     for(int i = 0; i < function->upvalueCount; i++) {
-        int uvIndex = compiler.upvalues[i].index;
+        int uvIndex = compiler->upvalues[i].index;
 
         // 1 if it's a local in the enclosing function, 0 for one of the function's upvalues
-        emitByte((compiler.upvalues[i].isLocal ? 1 : 0) | (uvIndex > 255 ? 2 : 0)); // have to use this byte to indicate whether it's a long uvIndex or not
+        emitByte((compiler->upvalues[i].isLocal ? 1 : 0) | (uvIndex > 255 ? 2 : 0)); // have to use this byte to indicate whether it's a long uvIndex or not
 
         if(uvIndex <= 255) {
             emitByte((uint8_t)uvIndex);
@@ -809,6 +811,8 @@ static void function(FunctionType type) {
             emitByte((uint8_t)(uvIndex & 0xFF));
         }
     }
+
+    free(compiler);
 }
 
 static void beginScope() {

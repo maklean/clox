@@ -60,6 +60,9 @@ void initVM() {
     vm.grayCount = vm.grayCapacity = 0;
     vm.grayStack = NULL;
 
+    vm.bytesAllocated = 0;
+    vm.nextGC = 1024 * 1024;
+
     initTable(&vm.strings);
     initTable(&vm.globals);
 
@@ -399,8 +402,9 @@ static bool isFalsey(Value value) {
 }
 
 static void concatenate() {
-    ObjString *b = AS_STRING(pop());
-    ObjString *a = AS_STRING(pop());
+    // peek() the strings so they don't mistakingly get unmarked if the GC triggers when creating the new string object
+    ObjString *b = AS_STRING(peek(0));
+    ObjString *a = AS_STRING(peek(1));
 
     int length = a->length + b->length;
     char *chars = ALLOCATE(sizeof(char), length+1);
@@ -411,6 +415,10 @@ static void concatenate() {
     chars[length] = '\0';
 
     ObjString *result = takeString(chars, length);
+
+    // string was creating successfully, clean up the two strings
+    pop();
+    pop();
 
     push(OBJ_VAL(result));
 }

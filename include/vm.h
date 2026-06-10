@@ -39,6 +39,9 @@ typedef struct {
     int grayCount;
     int grayCapacity;
     Obj **grayStack;
+
+    size_t bytesAllocated; // number of bytes the VM has allocated for live objects
+    size_t nextGC; // threshold for next GC trigger
 } VM;
 
 typedef enum {

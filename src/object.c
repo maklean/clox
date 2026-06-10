@@ -139,8 +139,13 @@ static ObjString *allocateString(char *chars, int length, uint32_t hash) {
     string->chars = chars;
     string->length = length;
     string->hash = hash;
-    
+
+    // add to VM stack so it doesn't get cleaned up by the GC if the hash table has to resize.
+    push(OBJ_VAL(string));
+
     tableSet(&vm.strings, string, NIL_VAL);
+
+    pop();
 
     return string;
 }

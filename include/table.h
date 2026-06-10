@@ -37,6 +37,9 @@ void tableAddAll(Table *from, Table *to);
 // Attempts to find the 
 ObjString *tableFindString(Table *table, const char *chars, int length, uint32_t hash);
 
+// Removes every white (unused) string from the hash table.
+void tableRemoveWhite(Table *table);
+
 // Marks all variables stored in the table.
 void markTable(Table *table);
 

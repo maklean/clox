@@ -1,5 +1,6 @@
 #include "../include/chunk.h"
 #include "../include/memory.h"
+#include "../include/vm.h"
 
 #include <stdlib.h>
 #include <stdbool.h>
@@ -36,7 +37,12 @@ void writeChunk(Chunk* chunk, uint8_t byte, int line) {
 }
 
 bool writeConstant(Chunk* chunk, Value value, int line) {
+    // Push value onto the stack so it doesn't get sweeped by the GC b/c of array resize
+    push(value);
+
     writeValueArray(&chunk->constants, value);
+
+    pop(value);
 
     int index = chunk->constants.count-1;
 
