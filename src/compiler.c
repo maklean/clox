@@ -123,6 +123,9 @@ static void funDeclaration();
 // Parses a variable declaration.
 static void varDeclaration();
 
+// Parses a class declaration.
+static void classDeclaration();
+
 // Parses a statement.
 static void statement();
 
@@ -216,7 +219,7 @@ static void namedVariable(Token name, bool canAssign);
 // Emits a OP_DEFINE_GLOBAL/OP_DEFINE_GLOBAL_LONG instruction.
 static void defineVariable(int global);
 
-// Declares a local variable.
+// Declares the current identifier token as a local variable.
 static void declareVariable();
 
 // Adds the given token to the global locals array.
@@ -476,6 +479,8 @@ static void declaration() {
         funDeclaration();
     } else if(match(TOKEN_VAR)) {
         varDeclaration();
+    } else if(match(TOKEN_CLASS)) {
+        classDeclaration();
     } else {
         // if it doesn't match any of the tokens above, it's a statement
         statement();
@@ -507,6 +512,24 @@ static void varDeclaration() {
 
     consume(TOKEN_SEMICOLON, "Expected ';' after variable declaration.");
     defineVariable(global);
+}
+
+static void classDeclaration() {
+    consume(TOKEN_IDENTIFIER, "Expected class name.");
+    
+    // declare class name as variable
+    int nameConstant = identifierConstant(&parser.previous);
+    declareVariable();
+
+    if(nameConstant <= 255) {
+        emitBytes(OP_CLASS, (uint8_t)nameConstant);
+    } else {
+        emitLongBytes(OP_CLASS_LONG, nameConstant);
+    }
+    
+    defineVariable(nameConstant); // we define it before the body, so the class can refer to itself if it wants to create new instances (and do other stuff)
+    consume(TOKEN_LEFT_BRACE, "Expected '{' before class body.");
+    consume(TOKEN_RIGHT_BRACE, "Expected '}' after class body.");
 }
 
 static void statement() {
@@ -1036,7 +1059,13 @@ static int addUpvalue(Compiler *compiler, int index, bool isLocal) {
 }
 
 static int identifierConstant(Token *name) {
-    writeValueArray(&currentChunk()->constants, OBJ_VAL(copyString(name->start, name->length)));
+    ObjString *str = copyString(name->start, name->length);
+
+    push(OBJ_VAL(str)); // to prevent GC bugs
+
+    writeValueArray(&currentChunk()->constants, OBJ_VAL(str));
+
+    pop();
 
     // this should work...
     return currentChunk()->constants.count-1;

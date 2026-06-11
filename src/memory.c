@@ -89,11 +89,11 @@ void collectGarbage() {
 
     #ifdef DEBUG_LOG_GC
         printf("-- gc end\n");
-    #endif
 
-    printf("   collected %zu bytes (from %zu to %zu) next at %zu\n",
-        before - vm.bytesAllocated, before, vm.bytesAllocated,
-        vm.nextGC);
+        printf("   collected %zu bytes (from %zu to %zu) next at %zu\n",
+            before - vm.bytesAllocated, before, vm.bytesAllocated,
+            vm.nextGC);
+    #endif
 }
 
 void markValue(Value value) {
@@ -152,6 +152,18 @@ static void freeObject(Obj *object) {
         case OBJ_UPVALUE:
             FREE(sizeof(ObjUpvalue), object);
             break;
+        case OBJ_CLASS: {
+            FREE(sizeof(ObjClass), object);
+            break;
+        } 
+        case OBJ_INSTANCE: {
+            ObjInstance* instance = (ObjInstance*)object;
+            freeTable(&instance->fields);
+
+            FREE(sizeof(ObjInstance), object);
+
+            break;
+        }
     }
 }
 
@@ -243,6 +255,19 @@ static void blackenObject(Obj *object) {
                 markObject((Obj *)closure->upvalues[i]);
             }
 
+            break;
+        }
+
+        case OBJ_CLASS: {
+            ObjClass *klass = (ObjClass *)object;
+            markObject((Obj *)klass->name);
+            break;
+        }
+
+        case OBJ_INSTANCE: {
+            ObjInstance* instance = (ObjInstance*)object;
+            markObject((Obj*)instance->klass);
+            markTable(&instance->fields);
             break;
         }
 

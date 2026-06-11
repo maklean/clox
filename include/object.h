@@ -4,6 +4,7 @@
 #include "common.h"
 #include "value.h"
 #include "chunk.h"
+#include "table.h"
 
 // Returns the type of the given value
 #define OBJ_TYPE(value) (AS_OBJ(value)->type)
@@ -16,6 +17,12 @@
 
 // Returns whether the type of the value is a closure.
 #define IS_CLOSURE(value) isObjType(value, OBJ_CLOSURE)
+
+// Returns whether the type of the value is a class.
+#define IS_CLASS(value) isObjType(value, OBJ_CLASS)
+
+// Returns whether the type of the value is a class instance.
+#define IS_INSTANCE(value) isObjType(value, OBJ_INSTANCE)
 
 // Returns whether the type of the value is a native function.
 #define IS_NATIVE(value) isObjType(value, OBJ_NATIVE)
@@ -35,12 +42,20 @@
 // Returns the function pointed to by an `ObjNative *`.
 #define AS_NATIVE(value) (((ObjNative *)AS_OBJ(value))->function)
 
+// Returns the value as an `ObjClass *`
+#define AS_CLASS(value) ((ObjClass *)AS_OBJ(value))
+
+// Returns the value as an `ObjInstance *`
+#define AS_INSTANCE(value) ((ObjInstance *)AS_OBJ(value))
+
 typedef enum {
     OBJ_FUNCTION,
     OBJ_STRING,
     OBJ_NATIVE,
     OBJ_UPVALUE,
     OBJ_CLOSURE,
+    OBJ_CLASS,
+    OBJ_INSTANCE,
 } ObjType;
 
 struct Obj {
@@ -78,6 +93,17 @@ typedef struct {
     int upvalueCount;
 } ObjClosure;
 
+typedef struct {
+    Obj obj;
+    ObjString *name;
+} ObjClass;
+
+typedef struct {
+    Obj obj;
+    ObjClass *klass;
+    Table fields;
+} ObjInstance;
+
 typedef Value (*NativeFn)(int argCount, Value *args);
 
 typedef struct {
@@ -96,6 +122,12 @@ ObjClosure *newClosure(ObjFunction *function);
 
 // Heap-allocates a new `ObjUpvalue` struct.
 ObjUpvalue *newUpvalue(Value *slot);
+
+// Heap-allocates a new `ObjString` struct.
+ObjClass *newClass(ObjString *name);
+
+// Heap-allocates a new `ObjInstance` struct.
+ObjInstance *newInstance(ObjClass *klass);
 
 // Allocates a heap-allocated `ObjString` made from 'chars' and 'length'.
 ObjString *takeString(char *chars, int length);

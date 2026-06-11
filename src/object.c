@@ -69,6 +69,23 @@ ObjUpvalue *newUpvalue(Value *slot) {
     return upvalue;
 }
 
+ObjClass *newClass(ObjString *name) {
+    ObjClass *klass = (ObjClass *)ALLOCATE_OBJ(sizeof(ObjClass), OBJ_CLASS);
+
+    klass->name = name;
+
+    return klass;
+}
+
+ObjInstance *newInstance(ObjClass *klass) {
+    ObjInstance *instance = (ObjInstance *)ALLOCATE_OBJ(sizeof(ObjInstance), OBJ_INSTANCE);
+
+    instance->klass = klass;
+    initTable(&instance->fields);
+
+    return instance;
+}
+
 ObjString *takeString(char *chars, int length) {
     uint32_t hash = hashString(chars, length);
 
@@ -113,6 +130,12 @@ void printObject(Value value) {
             break;
         case OBJ_UPVALUE:
             printf("upvalue");
+            break;
+        case OBJ_CLASS:
+            printf("%s", AS_CLASS(value)->name->chars);
+            break;
+        case OBJ_INSTANCE:
+            printf("%s instance", AS_INSTANCE(value)->klass->name->chars);
             break;
     }
 }

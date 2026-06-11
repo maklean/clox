@@ -149,6 +149,10 @@ int disassembleInstruction(Chunk *chunk, int offset) {
         }
         case OP_CLOSE_UPVALUE:
             return simpleInstruction("OP_CLOSE_UPVALUE", offset);
+        case OP_CLASS:
+            return constantInstruction("OP_CLASS", chunk, offset);
+        case OP_CLASS_LONG:
+            return constantInstruction("OP_CLASS_LONG", chunk, offset);
         default:
             printf("Unknown opcode %d\n", instruction);
             return offset + 1;
@@ -168,12 +172,13 @@ static int constantInstruction(const char *name, Chunk *chunk, int offset) {
         strcmp(name, "OP_CONSTANT") == 0 || 
         strcmp(name, "OP_DEFINE_GLOBAL") == 0 ||
         strcmp(name, "OP_GET_GLOBAL") == 0 ||
-        strcmp(name, "OP_SET_GLOBAL") == 0
+        strcmp(name, "OP_SET_GLOBAL") == 0 ||
+        strcmp(name, "OP_CLASS") == 0
     ) {
         constant = chunk->code[offset+1];
         offset_skip = 2;
     } else {
-        // OP_CONSTANT_LONG/OP_DEFINE_GLOBAL_LONG/OP_GET_GLOBAL_LONG get 3 bytes for index
+        // should be an xxx_LONG instruction, get index using 3 bytes
         constant = (chunk->code[offset+1] << 16) | (chunk->code[offset+2] << 8) | chunk->code[offset+3];
         offset_skip = 4;
     }

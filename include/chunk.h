@@ -43,6 +43,8 @@ typedef enum {
     OP_CALL,
     OP_CLOSURE,
     OP_CLOSURE_LONG,
+    OP_CLASS,
+    OP_CLASS_LONG,
     OP_RETURN
 } OpCode;
 

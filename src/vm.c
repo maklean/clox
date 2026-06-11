@@ -322,6 +322,11 @@ static InterpretResult run() {
                 closeUpvalues(vm.stackTop-1);
                 pop();
                 break;
+            
+            case OP_CLASS:
+            case OP_CLASS_LONG:
+                push(OBJ_VAL(newClass(instruction == OP_CLASS ? (READ_STRING()) : (READ_STRING_LONG()))));
+                break;
         }
     }
 
@@ -426,6 +431,14 @@ static void concatenate() {
 static bool callValue(Value callee, int argCount) {
     if(IS_OBJ(callee)) {
         switch(OBJ_TYPE(callee)) {
+            case OBJ_CLASS: {
+                ObjClass *klass = AS_CLASS(callee);
+
+                // replace class object on the stack with new instance
+                vm.stackTop[-argCount - 1] = OBJ_VAL(newInstance(klass));
+
+                return true;
+            }
             case OBJ_NATIVE:
                 NativeFn native = AS_NATIVE(callee);
 
