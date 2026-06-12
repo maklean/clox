@@ -48,6 +48,12 @@ static void defineMethod(ObjString *name);
 // Pushes an ObjBoundMethod bound to the most recent object instance onto the stack.
 static bool bindMethod(ObjClass* klass, ObjString* name);
 
+// Calls the given method on the instance `argCount` away from the top of the stack.
+static bool invoke(ObjString *name, int argCount);
+
+// Calls the given method from the given class object. Returns whether the call was successful or not.
+static bool invokeFromClass(ObjClass *klass, ObjString *name, int argCount);
+
 // Creates a native function
 static void defineNative(const char *name, NativeFn function) {
     push(OBJ_VAL(copyString(name, (int)strlen(name))));
@@ -387,6 +393,22 @@ static InterpretResult run() {
             case OP_METHOD_LONG:
                 defineMethod(instruction == OP_METHOD ? (READ_STRING()) : (READ_STRING_LONG()));
                 break;
+            
+            case OP_INVOKE:
+            case OP_INVOKE_LONG: {
+                ObjString *method = instruction == OP_INVOKE ? (READ_STRING()) : (READ_STRING_LONG());
+                int argCount = READ_BYTE();
+
+                // call the method with the given name (instance obj should be `argCount` away from the top of the stack atp)
+                if(!invoke(method, argCount)) {
+                    return INTERPRET_RUNTIME_ERROR;
+                }
+
+                // point to new frame on VM
+                frame = &vm.frames[vm.frameCount - 1];
+
+                break;
+            }
         }
     }
 
@@ -625,4 +647,38 @@ static bool bindMethod(ObjClass* klass, ObjString* name) {
     push(OBJ_VAL(bound));
 
     return true;
+}
+
+static bool invoke(ObjString *name, int argCount) {
+    // get instance
+    Value receiver = peek(argCount);
+
+    if(!IS_INSTANCE(receiver)) {
+        runtimeError("Only instances have methods.");
+        return false;
+    }
+
+    ObjInstance *instance = AS_INSTANCE(receiver);
+
+    // look for field with same name before looking for function
+    Value value;
+
+    if(tableGet(&instance->fields, name, &value)) {
+        vm.stackTop[-argCount - 1] = value;
+        return callValue(value, argCount);
+    }
+
+    // call method on instance
+    return invokeFromClass(instance->klass, name, argCount);
+}
+
+static bool invokeFromClass(ObjClass *klass, ObjString *name, int argCount) {
+    Value method;
+
+    if(!tableGet(&klass->methods, name, &method)) {
+        runtimeError("Undefined property '%s'.", name->chars);
+        return false;
+    }
+
+    return call(AS_CLOSURE(method), argCount);
 }

@@ -802,6 +802,12 @@ static void dot(bool canAssign) {
     if(canAssign && match(TOKEN_EQUAL)) {
         expression();
         name <= 255 ? emitBytes(OP_SET_PROPERTY, (uint8_t)name) : emitLongBytes(OP_SET_PROPERTY_LONG, name);
+    } else if(match(TOKEN_LEFT_PAREN)) {
+        // we're most likely making a method call if we're accessing some function after a dot property
+        uint8_t argCount = argumentList();
+
+        name <= 255 ? emitBytes(OP_INVOKE, (uint8_t)name) : emitLongBytes(OP_INVOKE_LONG, name);
+        emitByte(argCount);
     } else {
         name <= 255 ? emitBytes(OP_GET_PROPERTY, (uint8_t)name) : emitLongBytes(OP_GET_PROPERTY_LONG, name);
     }
