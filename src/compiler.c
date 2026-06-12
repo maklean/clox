@@ -58,6 +58,7 @@ typedef struct {
 typedef enum {
     TYPE_FUNCTION, // executing code inside a function
     TYPE_SCRIPT, // executing top-level code, i.e., the program
+    TYPE_METHOD, // executing class methods
 } FunctionType;
 
 // Local variable state
@@ -71,9 +72,14 @@ typedef struct Compiler {
     Upvalue upvalues[UINT16_COUNT];
 } Compiler;
 
+typedef struct ClassCompiler {
+  struct ClassCompiler *enclosing;
+} ClassCompiler;
+
 Parser parser;
 Chunk *compilingChunk;
-Compiler* current = NULL;
+Compiler *current = NULL;
+ClassCompiler *currentClass = NULL;
 
 // Initializes the compiler state.
 static void initCompiler(Compiler *compiler, FunctionType type);
@@ -179,6 +185,9 @@ static void string(bool canAssign);
 
 // Parses/Reads a variable
 static void variable(bool canAssign);
+
+// Parses a 'this' access.
+static void this_(bool canAssign);
 
 // Parses an 'and' keyword.
 static void and_(bool canAssign);
@@ -293,7 +302,7 @@ ParseRule rules[] = {
   [TOKEN_PRINT]         = {NULL,     NULL,   PREC_NONE},
   [TOKEN_RETURN]        = {NULL,     NULL,   PREC_NONE},
   [TOKEN_SUPER]         = {NULL,     NULL,   PREC_NONE},
-  [TOKEN_THIS]          = {NULL,     NULL,   PREC_NONE},
+  [TOKEN_THIS]          = {this_,    NULL,   PREC_NONE},
   [TOKEN_TRUE]          = {literal,  NULL,   PREC_NONE},
   [TOKEN_VAR]           = {NULL,     NULL,   PREC_NONE},
   [TOKEN_WHILE]         = {NULL,     NULL,   PREC_NONE},
@@ -318,9 +327,16 @@ static void initCompiler(Compiler *compiler, FunctionType type) {
     }
 
     Local *local = &current->locals[current->localCount++];
-    local->name.start = "";
-    local->depth = local->name.length = 0;
+
     local->isCaptured = false;
+    if(type != TYPE_FUNCTION) {
+        // make the first slot in the function's stack window the 'this' variable
+        local->name.start = "this";
+        local->name.length = 4;
+    } else {
+        local->name.start = "";
+        local->name.length = 0;
+    }
 }
 
 ObjFunction *compile(const char *source) {
@@ -535,6 +551,12 @@ static void classDeclaration() {
     }
     
     defineVariable(nameConstant); // we define it before the body, so the class can refer to itself if it wants to create new instances (and do other stuff)
+    
+    // set current class
+    ClassCompiler classCompiler;
+    classCompiler.enclosing = currentClass;
+    currentClass = &classCompiler;
+    
     namedVariable(className, false); // load the class name on top of the stack so the methods can know what class they bind to
 
     consume(TOKEN_LEFT_BRACE, "Expected '{' before class body.");
@@ -545,6 +567,9 @@ static void classDeclaration() {
 
     consume(TOKEN_RIGHT_BRACE, "Expected '}' after class body.");
     emitByte(OP_POP); // rmv. class name
+
+    // unset current class
+    currentClass = currentClass->enclosing;
 }
 
 static void statement() {
@@ -778,6 +803,15 @@ static void variable(bool canAssign) {
     namedVariable(parser.previous, canAssign);
 }
 
+static void this_(bool canAssign) {
+    if(currentClass == NULL) {
+        error("Can't use 'this' outside of a class.");
+        return;
+    }
+
+    variable(false);
+}
+
 static void and_(bool canAssign) {
     // emit jump to short-circuit if the condition is false
     int endJump = emitJump(OP_JUMP_IF_FALSE);
@@ -872,7 +906,7 @@ static void method() {
     // add method name to constant table
     int constant = identifierConstant(&parser.previous);
     
-    FunctionType type = TYPE_FUNCTION;
+    FunctionType type = TYPE_METHOD;
     function(type);
 
     if(constant <= 255) {
