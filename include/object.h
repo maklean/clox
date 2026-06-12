@@ -27,6 +27,9 @@
 // Returns whether the type of the value is a native function.
 #define IS_NATIVE(value) isObjType(value, OBJ_NATIVE)
 
+// Returns whether the type of the value is a bound method.
+#define IS_BOUND_METHOD(value) isObjType(value, OBJ_BOUND_METHOD)
+
 // Returns the value as an `ObjString *`
 #define AS_STRING(value) ((ObjString *)AS_OBJ(value))
 
@@ -48,6 +51,9 @@
 // Returns the value as an `ObjInstance *`
 #define AS_INSTANCE(value) ((ObjInstance *)AS_OBJ(value))
 
+// Returns the value as an `ObjBoundMethod *`
+#define AS_BOUND_METHOD(value) ((ObjBoundMethod *)AS_OBJ(value))
+
 typedef enum {
     OBJ_FUNCTION,
     OBJ_STRING,
@@ -56,6 +62,7 @@ typedef enum {
     OBJ_CLOSURE,
     OBJ_CLASS,
     OBJ_INSTANCE,
+    OBJ_BOUND_METHOD,
 } ObjType;
 
 struct Obj {
@@ -96,6 +103,7 @@ typedef struct {
 typedef struct {
     Obj obj;
     ObjString *name;
+    Table methods;
 } ObjClass;
 
 typedef struct {
@@ -103,6 +111,12 @@ typedef struct {
     ObjClass *klass;
     Table fields;
 } ObjInstance;
+
+typedef struct {
+    Obj obj;
+    Value receiver;
+    ObjClosure *method;
+} ObjBoundMethod;
 
 typedef Value (*NativeFn)(int argCount, Value *args);
 
@@ -128,6 +142,9 @@ ObjClass *newClass(ObjString *name);
 
 // Heap-allocates a new `ObjInstance` struct.
 ObjInstance *newInstance(ObjClass *klass);
+
+// Heap-allocates a new `ObjBoundMethod` struct.
+ObjBoundMethod *newBoundMethod(Value receiver, ObjClosure *method);
 
 // Allocates a heap-allocated `ObjString` made from 'chars' and 'length'.
 ObjString *takeString(char *chars, int length);

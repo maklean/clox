@@ -73,6 +73,7 @@ ObjClass *newClass(ObjString *name) {
     ObjClass *klass = (ObjClass *)ALLOCATE_OBJ(sizeof(ObjClass), OBJ_CLASS);
 
     klass->name = name;
+    initTable(&klass->methods);
 
     return klass;
 }
@@ -84,6 +85,15 @@ ObjInstance *newInstance(ObjClass *klass) {
     initTable(&instance->fields);
 
     return instance;
+}
+
+ObjBoundMethod *newBoundMethod(Value receiver, ObjClosure *method) {
+    ObjBoundMethod *bound = (ObjBoundMethod *)ALLOCATE_OBJ(sizeof(ObjBoundMethod), OBJ_BOUND_METHOD);
+
+    bound->receiver = receiver;
+    bound->method = method;
+
+    return bound;
 }
 
 ObjString *takeString(char *chars, int length) {
@@ -136,6 +146,9 @@ void printObject(Value value) {
             break;
         case OBJ_INSTANCE:
             printf("%s instance", AS_INSTANCE(value)->klass->name->chars);
+            break;
+        case OBJ_BOUND_METHOD:
+            printFunction(AS_BOUND_METHOD(value)->method->function);
             break;
     }
 }

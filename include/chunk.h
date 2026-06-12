@@ -49,6 +49,8 @@ typedef enum {
     OP_GET_PROPERTY_LONG,
     OP_SET_PROPERTY,
     OP_SET_PROPERTY_LONG,
+    OP_METHOD,
+    OP_METHOD_LONG,
     OP_RETURN
 } OpCode;
 

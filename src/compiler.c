@@ -192,6 +192,9 @@ static void block();
 // Parses a function body.
 static void function(FunctionType type);
 
+// Parses a class method body.
+static void method();
+
 // Increments the global scope depth (called on entering a new scope)
 static void beginScope();
 
@@ -521,6 +524,7 @@ static void classDeclaration() {
     consume(TOKEN_IDENTIFIER, "Expected class name.");
     
     // declare class name as variable
+    Token className = parser.previous;
     int nameConstant = identifierConstant(&parser.previous);
     declareVariable();
 
@@ -531,8 +535,16 @@ static void classDeclaration() {
     }
     
     defineVariable(nameConstant); // we define it before the body, so the class can refer to itself if it wants to create new instances (and do other stuff)
+    namedVariable(className, false); // load the class name on top of the stack so the methods can know what class they bind to
+
     consume(TOKEN_LEFT_BRACE, "Expected '{' before class body.");
+
+    while(!check(TOKEN_RIGHT_BRACE) && !check(TOKEN_EOF)) {
+        method();
+    }
+
     consume(TOKEN_RIGHT_BRACE, "Expected '}' after class body.");
+    emitByte(OP_POP); // rmv. class name
 }
 
 static void statement() {
@@ -852,6 +864,22 @@ static void function(FunctionType type) {
     }
 
     free(compiler);
+}
+
+static void method() {
+    consume(TOKEN_IDENTIFIER, "Expected method name.");
+    
+    // add method name to constant table
+    int constant = identifierConstant(&parser.previous);
+    
+    FunctionType type = TYPE_FUNCTION;
+    function(type);
+
+    if(constant <= 255) {
+        emitBytes(OP_METHOD, (uint8_t)constant);
+    } else {
+        emitLongBytes(OP_METHOD_LONG, constant);
+    }
 }
 
 static void beginScope() {

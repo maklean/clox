@@ -42,6 +42,12 @@ static void closeUpvalues(Value *last);
 // Calls the given function, returns whether the call was successful.
 static bool call(ObjClosure *closure, int argCount);
 
+// Defines a class method using the method closure at the top of the stack.
+static void defineMethod(ObjString *name);
+
+// Pushes an ObjBoundMethod bound to the most recent object instance onto the stack.
+static bool bindMethod(ObjClass* klass, ObjString* name);
+
 // Creates a native function
 static void defineNative(const char *name, NativeFn function) {
     push(OBJ_VAL(copyString(name, (int)strlen(name))));
@@ -347,8 +353,10 @@ static InterpretResult run() {
                     break;
                 }
 
-                runtimeError("Undefined property '%s'.", name->chars);
-                return INTERPRET_RUNTIME_ERROR;
+                if(!bindMethod(instance->klass, name)) {
+                    return INTERPRET_RUNTIME_ERROR;
+                }
+                break;
             }
 
             case OP_SET_PROPERTY:
@@ -370,6 +378,11 @@ static InterpretResult run() {
 
                 break;
             }
+
+            case OP_METHOD:
+            case OP_METHOD_LONG:
+                defineMethod(instruction == OP_METHOD ? (READ_STRING()) : (READ_STRING_LONG()));
+                break;
         }
     }
 
@@ -493,6 +506,10 @@ static bool callValue(Value callee, int argCount) {
                 return true;
             case OBJ_CLOSURE:
                 return call(AS_CLOSURE(callee), argCount);
+            case OBJ_BOUND_METHOD: {
+                ObjBoundMethod *bound = AS_BOUND_METHOD(callee);
+                return call(bound->method, argCount);
+            }
             default:
                 break;
         }
@@ -564,4 +581,32 @@ static bool call(ObjClosure* closure, int argCount) {
 
 static Value clockNative(int argCount, Value *args) {
     return NUMBER_VAL((double)clock() / CLOCKS_PER_SEC);
+}
+
+static void defineMethod(ObjString *name) {
+    // use ObjClosure at the top of the stack
+    Value method = peek(0);
+    ObjClass *klass = AS_CLASS(peek(1));
+
+    // store method in class, then remove it from the top of the stack
+    tableSet(&klass->methods, name, method);
+
+    pop();
+}
+
+static bool bindMethod(ObjClass* klass, ObjString* name) {
+    // find method in class' method table
+    Value method;
+    if(!tableGet(&klass->methods, name, &method)) {
+        runtimeError("Undefined property '%s'.", name->chars);
+        return false;
+    }
+
+    // create new bound method instance at the top of the stack
+    ObjBoundMethod *bound = newBoundMethod(peek(0), AS_CLOSURE(method));
+
+    pop(); // rmv. instance from top of stack
+    push(OBJ_VAL(bound));
+
+    return true;
 }

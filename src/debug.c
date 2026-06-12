@@ -161,6 +161,10 @@ int disassembleInstruction(Chunk *chunk, int offset) {
             return constantInstruction("OP_SET_PROPERTY", chunk, offset);
         case OP_SET_PROPERTY_LONG:
             return constantInstruction("OP_SET_PROPERTY_LONG", chunk, offset);
+        case OP_METHOD:
+            return constantInstruction("OP_METHOD", chunk, offset);
+        case OP_METHOD_LONG:
+            return constantInstruction("OP_METHOD_LONG", chunk, offset);
         default:
             printf("Unknown opcode %d\n", instruction);
             return offset + 1;
@@ -183,7 +187,8 @@ static int constantInstruction(const char *name, Chunk *chunk, int offset) {
         strcmp(name, "OP_SET_GLOBAL") == 0 ||
         strcmp(name, "OP_CLASS") == 0 ||
         strcmp(name, "OP_GET_PROPERTY") == 0 ||
-        strcmp(name, "OP_SET_PROPERTY") == 0
+        strcmp(name, "OP_SET_PROPERTY") == 0 ||
+        strcmp(name, "OP_METHOD") == 0
     ) {
         constant = chunk->code[offset+1];
         offset_skip = 2;
