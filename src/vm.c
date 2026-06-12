@@ -327,6 +327,49 @@ static InterpretResult run() {
             case OP_CLASS_LONG:
                 push(OBJ_VAL(newClass(instruction == OP_CLASS ? (READ_STRING()) : (READ_STRING_LONG()))));
                 break;
+            
+            case OP_GET_PROPERTY:
+            case OP_GET_PROPERTY_LONG: {
+                // property access should only be valid on an instance
+                if (!IS_INSTANCE(peek(0))) {
+                    runtimeError("Only instances have properties.");
+                    return INTERPRET_RUNTIME_ERROR;
+                }
+
+                ObjInstance *instance = AS_INSTANCE(peek(0));
+                ObjString *name = instruction == OP_GET_PROPERTY ? (READ_STRING()) : (READ_STRING_LONG());
+
+                Value value;
+                if(tableGet(&instance->fields, name, &value)) {
+                    // remove instance and add field value to stack
+                    pop(); 
+                    push(value);
+                    break;
+                }
+
+                runtimeError("Undefined property '%s'.", name->chars);
+                return INTERPRET_RUNTIME_ERROR;
+            }
+
+            case OP_SET_PROPERTY:
+            case OP_SET_PROPERTY_LONG: {
+                // property access should only be valid on an instance
+                if (!IS_INSTANCE(peek(1))) {
+                    runtimeError("Only instances have properties.");
+                    return INTERPRET_RUNTIME_ERROR;
+                }
+
+                ObjInstance *instance = AS_INSTANCE(peek(1));
+                
+                tableSet(&instance->fields, (instruction == OP_SET_PROPERTY ? (READ_STRING()) : (READ_STRING_LONG())), peek(0));
+
+                // get value, pop instance, add value back to the stack (since it should be the result of the expression)
+                Value value = pop();
+                pop();
+                push(value);
+
+                break;
+            }
         }
     }
 
