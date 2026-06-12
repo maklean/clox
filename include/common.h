@@ -12,6 +12,6 @@
 //#define DEBUG_STRESS_GC
 
 // Prints information to the console when some operation with dynamic memory occurs.
-#define DEBUG_LOG_GC
+//#define DEBUG_LOG_GC
 
 #endif

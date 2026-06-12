@@ -29,6 +29,7 @@ typedef struct {
     Obj *objects; // linked-list of all heap-allocated values
 
     ObjUpvalue *openUpvalues; // linked-list of open upvalues
+    ObjString *initString; // string for init() initializer method for classes
 
     Table strings; // for string interning
     Table globals; // for global variables

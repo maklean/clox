@@ -193,6 +193,9 @@ static void markRoots() {
     for(ObjUpvalue *upvalue = vm.openUpvalues; upvalue != NULL; upvalue = upvalue->next) {
         markObject((Obj *)upvalue);
     }
+
+    // mark init method string
+    markObject((Obj *)vm.initString);
 }
 
 static void traceReferences() {

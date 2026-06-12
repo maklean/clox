@@ -59,6 +59,7 @@ typedef enum {
     TYPE_FUNCTION, // executing code inside a function
     TYPE_SCRIPT, // executing top-level code, i.e., the program
     TYPE_METHOD, // executing class methods
+    TYPE_INITIALIZER, // executing class initializer method (i.e., init())
 } FunctionType;
 
 // Local variable state
@@ -433,7 +434,13 @@ static void emitLongBytes(uint8_t instruction, int bytes) {
 }
 
 static void emitReturn() {
-    emitByte(OP_NIL);
+    if(current->type == TYPE_INITIALIZER) {
+        // return 'this' if it's a class initializer method
+        emitBytes(OP_GET_LOCAL, 0); // 'this' is always slot 0, so no need to check for OP_GET_LOCAL_LONG
+    } else {
+        emitByte(OP_NIL);
+    }
+
     emitByte(OP_RETURN);
 }
 
@@ -703,6 +710,11 @@ static void returnStatement() {
         // emit NIL and return
         emitReturn();
     } else {
+        // check if they're trying to return something from an initializer method
+        if(current->type == TYPE_INITIALIZER) {
+            error("Can't return a value from an initializer.");
+        }
+
         // emit return value and return
         expression();
         consume(TOKEN_SEMICOLON, "Expected ';' after return value.");
@@ -907,6 +919,12 @@ static void method() {
     int constant = identifierConstant(&parser.previous);
     
     FunctionType type = TYPE_METHOD;
+
+    // check if we're parsing the init() method
+    if(parser.previous.length == 4 && memcmp(parser.previous.start, "init", 4) == 0) {
+        type = TYPE_INITIALIZER;
+    }
+
     function(type);
 
     if(constant <= 255) {
