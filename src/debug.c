@@ -172,6 +172,16 @@ int disassembleInstruction(Chunk *chunk, int offset) {
             return invokeInstruction("OP_INVOKE", chunk, offset);
         case OP_INVOKE_LONG:
             return invokeInstruction("OP_INVOKE_LONG", chunk, offset);
+        case OP_INHERIT:
+            return simpleInstruction("OP_INHERIT", offset);
+        case OP_GET_SUPER:
+            return constantInstruction("OP_GET_SUPER", chunk, offset);
+        case OP_GET_SUPER_LONG:
+            return constantInstruction("OP_GET_SUPER_LONG", chunk, offset);
+        case OP_SUPER_INVOKE:
+            return invokeInstruction("OP_SUPER_INVOKE", chunk, offset);
+        case OP_SUPER_INVOKE_LONG:
+            return invokeInstruction("OP_SUPER_INVOKE_LONG", chunk, offset);
         default:
             printf("Unknown opcode %d\n", instruction);
             return offset + 1;
@@ -195,7 +205,8 @@ static int constantInstruction(const char *name, Chunk *chunk, int offset) {
         strcmp(name, "OP_CLASS") == 0 ||
         strcmp(name, "OP_GET_PROPERTY") == 0 ||
         strcmp(name, "OP_SET_PROPERTY") == 0 ||
-        strcmp(name, "OP_METHOD") == 0
+        strcmp(name, "OP_METHOD") == 0 ||
+        strcmp(name, "OP_GET_SUPER") == 0
     ) {
         constant = chunk->code[offset+1];
         offset_skip = 2;
@@ -248,7 +259,7 @@ static int invokeInstruction(const char* name, Chunk* chunk, int offset) {
     int constant, offset_skip;
     uint8_t argCount;
 
-    if(strcmp(name, "OP_INVOKE") == 0) {
+    if(strcmp(name, "OP_INVOKE") == 0 || strcmp(name, "OP_SUPER_INVOKE") == 0) {
         constant = chunk->code[offset+1];
         argCount = chunk->code[offset+2];
         offset_skip = 3;

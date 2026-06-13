@@ -409,6 +409,52 @@ static InterpretResult run() {
 
                 break;
             }
+
+            case OP_INHERIT: {
+                if(!IS_CLASS(peek(1))) {
+                    runtimeError("Superclass must be a class");
+                    return INTERPRET_RUNTIME_ERROR;
+                }
+
+                ObjClass *superclass = AS_CLASS(peek(1));
+                ObjClass *subclass = AS_CLASS(peek(0));
+
+                // add all superclass methods to the subclass methods
+                tableAddAll(&superclass->methods, &subclass->methods);
+                
+                pop(); // rmv. subclass from the stack
+
+                break;
+            }
+
+            case OP_GET_SUPER:
+            case OP_GET_SUPER_LONG: {
+                ObjString *name = instruction == OP_GET_SUPER ? (READ_STRING()) : (READ_STRING_LONG());
+                ObjClass *superclass = AS_CLASS(pop());
+
+                if(!bindMethod(superclass, name)) {
+                    return INTERPRET_RUNTIME_ERROR;
+                }
+
+                break;
+            }
+
+            case OP_SUPER_INVOKE:
+            case OP_SUPER_INVOKE_LONG: {
+                ObjString *method = instruction == OP_SUPER_INVOKE ? (READ_STRING()) : (READ_STRING_LONG());
+                int argCount = READ_BYTE();
+
+                ObjClass *superclass = AS_CLASS(pop());
+
+                // try to call method from super class directly
+                if(!invokeFromClass(superclass, method, argCount)) {
+                    return INTERPRET_RUNTIME_ERROR;
+                }
+
+                // point to new frame on VM
+                frame = &vm.frames[vm.frameCount - 1];
+                break;
+            }
         }
     }
 

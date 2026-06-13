@@ -75,6 +75,7 @@ typedef struct Compiler {
 
 typedef struct ClassCompiler {
   struct ClassCompiler *enclosing;
+  bool hasSuperclass;
 } ClassCompiler;
 
 Parser parser;
@@ -190,6 +191,9 @@ static void variable(bool canAssign);
 // Parses a 'this' access.
 static void this_(bool canAssign);
 
+// Parses a 'super' access.
+static void super_(bool canAssign);
+
 // Parses an 'and' keyword.
 static void and_(bool canAssign);
 
@@ -262,6 +266,9 @@ static int addUpvalue(Compiler *compiler, int index, bool isLocal);
 // Adds the given token to the constant table (as an ObjString), and returns its index.
 static int identifierConstant(Token *name);
 
+// Creates a token with the given name.
+static Token syntheticToken(const char *text);
+
 // Gets the parse rule for the given token type.
 static ParseRule *getRule(TokenType type);
 
@@ -302,7 +309,7 @@ ParseRule rules[] = {
   [TOKEN_OR]            = {NULL,     or_,    PREC_OR},
   [TOKEN_PRINT]         = {NULL,     NULL,   PREC_NONE},
   [TOKEN_RETURN]        = {NULL,     NULL,   PREC_NONE},
-  [TOKEN_SUPER]         = {NULL,     NULL,   PREC_NONE},
+  [TOKEN_SUPER]         = {super_,     NULL, PREC_NONE},
   [TOKEN_THIS]          = {this_,    NULL,   PREC_NONE},
   [TOKEN_TRUE]          = {literal,  NULL,   PREC_NONE},
   [TOKEN_VAR]           = {NULL,     NULL,   PREC_NONE},
@@ -328,8 +335,9 @@ static void initCompiler(Compiler *compiler, FunctionType type) {
     }
 
     Local *local = &current->locals[current->localCount++];
-
     local->isCaptured = false;
+    local->depth = 0;
+    
     if(type != TYPE_FUNCTION) {
         // make the first slot in the function's stack window the 'this' variable
         local->name.start = "this";
@@ -561,8 +569,34 @@ static void classDeclaration() {
     
     // set current class
     ClassCompiler classCompiler;
+
     classCompiler.enclosing = currentClass;
+    classCompiler.hasSuperclass = false;
+
     currentClass = &classCompiler;
+
+    if(match(TOKEN_LESS)) {
+        consume(TOKEN_IDENTIFIER, "Expected superclass name.");
+
+        // Lookup the superclass by name by treating it as a variable (should push it onto the stack)
+        variable(false);
+
+        if(identifiersEqual(&className, &parser.previous)) {
+            error("A class cannot inherit from itself.");
+        }
+
+        // begin scope for 'super' variable
+        beginScope();
+
+        // since we load the superclass onto the stack, we can use that to keep track of the superclass of the current class
+        addLocal(syntheticToken("super")); 
+        defineVariable(0);
+
+        namedVariable(className, false);
+
+        emitByte(OP_INHERIT);
+        classCompiler.hasSuperclass = true;
+    }
     
     namedVariable(className, false); // load the class name on top of the stack so the methods can know what class they bind to
 
@@ -574,7 +608,12 @@ static void classDeclaration() {
 
     consume(TOKEN_RIGHT_BRACE, "Expected '}' after class body.");
     emitByte(OP_POP); // rmv. class name
-
+    
+    if(classCompiler.hasSuperclass) {
+        // close scope for "super" variable
+        endScope();
+    }
+ 
     // unset current class
     currentClass = currentClass->enclosing;
 }
@@ -828,6 +867,35 @@ static void this_(bool canAssign) {
     }
 
     variable(false);
+}
+
+static void super_(bool canAssign) {
+    // prevent 'super' usage outside of classes
+    if(currentClass == NULL) {
+        error("Can't use 'super' outside of a class.");
+    } else if(!currentClass->hasSuperclass) {
+        error("Can't use 'super' in a class with no superclass");
+    }
+
+    consume(TOKEN_DOT, "Expect '.' after 'super'.");
+    consume(TOKEN_IDENTIFIER, "Expect superclass method name.");
+
+    int name = identifierConstant(&parser.previous);
+
+    namedVariable(syntheticToken("this"), false);
+
+    // check for superclass method call
+    if(match(TOKEN_LEFT_PAREN)) {
+        uint8_t argCount = argumentList();
+
+        namedVariable(syntheticToken("super"), false);
+
+        (name <= 255) ? emitBytes(OP_SUPER_INVOKE, (uint8_t)name) : emitLongBytes(OP_SUPER_INVOKE_LONG, name);
+        emitByte(argCount);
+    } else {
+        namedVariable(syntheticToken("super"), false);
+        (name <= 255) ? emitBytes(OP_GET_SUPER, (uint8_t)name) : emitLongBytes(OP_GET_SUPER_LONG, name);
+    }
 }
 
 static void and_(bool canAssign) {
@@ -1171,6 +1239,11 @@ static int identifierConstant(Token *name) {
 
     // this should work...
     return currentChunk()->constants.count-1;
+}
+
+static Token syntheticToken(const char *text) {
+    Token token = { .start = text, .length = strlen(text) };
+    return token;
 }
 
 static ParseRule *getRule(TokenType type) {
