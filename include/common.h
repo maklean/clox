@@ -5,8 +5,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#define DEBUG_PRINT_CODE
-#define DEBUG_TRACE_EXECUTION
+//#define DEBUG_PRINT_CODE
+//#define DEBUG_TRACE_EXECUTION
 
 // Makes the GC runs as frequently as possible (stress test).
 //#define DEBUG_STRESS_GC

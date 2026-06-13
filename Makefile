@@ -1,5 +1,11 @@
+DEBUG=false
 CC=gcc
-CCFLAGS=-g
+
+ifeq ($(DEBUG), true)
+	CCFLAGS=-g
+else
+	CCFLAGS=-O3
+endif
 
 BUILD_DIR=build
 SRC_DIR=src
