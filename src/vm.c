@@ -103,7 +103,7 @@ static InterpretResult run() {
     #define BINARY_OP(valueType, op) \
         do { \
             if(!IS_NUMBER(peek(0)) || !IS_NUMBER(peek(1))) { \
-                runtimeError("Expected two number operands at the top of the stack. Got types: %d and %d.", peek(0).type, peek(1).type); \
+                runtimeError("Expected two number operands at the top of the stack."); \
                 return INTERPRET_RUNTIME_ERROR; \
             } \
             double b = AS_NUMBER(pop()); \

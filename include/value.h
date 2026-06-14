@@ -3,8 +3,58 @@
 
 #include "common.h"
 
+#include <string.h>
+
 typedef struct Obj Obj;
 typedef struct ObjString ObjString;
+
+#ifdef NAN_BOXING
+
+#define QNAN ((uint64_t)0x7ffc000000000000) // all exponent bits set + 2 bits from the mantissa (1 for QNaN, 1 for Intel QNaN FP Indefinite)
+#define TAG_NIL 1 // 01
+#define TAG_FALSE 2 // 10
+#define TAG_TRUE 3 // 11
+#define SIGN_BIT ((uint64_t)0x8000000000000000) // sets the sign bit
+
+typedef uint64_t Value;
+
+// Creates a `Value` corresponding to the given C value.
+#define NUMBER_VAL(num) numToValue(num)
+#define NIL_VAL ((Value)(uint64_t)(QNAN | TAG_NIL)) // set QNAN + NIL bits
+#define FALSE_VAL ((Value)(uint64_t)(QNAN | TAG_FALSE)) // sets QNAN + FALSE bits
+#define TRUE_VAL ((Value)(uint64_t)(QNAN | TAG_TRUE)) // sets QNAN + TRUE bits
+#define BOOL_VAL(b) ((b) ? TRUE_VAL : FALSE_VAL)
+#define OBJ_VAL(obj) ((Value)(SIGN_BIT | QNAN | (uint64_t)(uintptr_t)(obj))) // sets SIGN_BIT + QNAN + bits from addr. of the object
+
+// Gets the literal value from the given `Value`.
+#define AS_NUMBER(value) valueToNum(value)
+#define AS_BOOL(value) ((value) == TRUE_VAL)
+#define AS_OBJ(value) ((Obj *)(uintptr_t)((value) & ~(SIGN_BIT | QNAN))) // removes all the SIGN_BIT + QNAN bits (which gives the bits from addr. of the obj)
+
+// Returns whether the given `Value` matches the specified variant.
+#define IS_NUMBER(value) (((value) & QNAN) != QNAN) // checks if all the quiet NaN bits are set
+#define IS_NIL(value) ((value) == NIL_VAL)
+#define IS_BOOL(value) (((value) | 1) == TRUE_VAL) // adds 1 and checks if it matches TRUE_VAL (should work for FALSE_VAL since (0b10 | 0b01) == 0b11)
+#define IS_OBJ(value) (((value) & (QNAN | SIGN_BIT)) == (QNAN | SIGN_BIT)) // checks if the QNAN + SIGN_BIT is set
+
+// Converts the given number into a `Value`.
+static inline Value numToValue(double num) {
+    Value value;
+
+    // copy all bits from num into value (compiler should optimize this apparently)
+    memcpy(&value, &num, sizeof(double));
+
+    return value;
+}
+
+// Converts the given `Value` into a number.
+static inline double valueToNum(Value value) {
+    double num;
+    memcpy(&num, &value, sizeof(Value));
+    return num;
+}
+
+#else
 
 typedef enum {
     VAL_BOOL,
@@ -22,13 +72,6 @@ typedef struct {
     } as;
 } Value;
 
-// Constant pool
-typedef struct {
-    int capacity;
-    int count;
-    Value *values;
-} ValueArray;
-
 // Creates a `Value` corresponding to the given C value.
 #define BOOL_VAL(value) ((Value){VAL_BOOL, {.boolean = value}})
 #define NIL_VAL ((Value){VAL_NIL, {.number = 0}})
@@ -45,6 +88,15 @@ typedef struct {
 #define IS_NIL(value) ((value).type == VAL_NIL)
 #define IS_NUMBER(value) ((value).type == VAL_NUMBER)
 #define IS_OBJ(value) ((value).type == VAL_OBJ)
+
+#endif
+
+// Constant pool
+typedef struct {
+    int capacity;
+    int count;
+    Value *values;
+} ValueArray;
 
 // Initializes a value array.
 void initValueArray(ValueArray *array);
