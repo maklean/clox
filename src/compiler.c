@@ -804,10 +804,10 @@ static void binary(bool canAssign) {
     ParseRule *rule = getRule(operatorType);
     
     if(operatorType == TOKEN_STAR_STAR) {
-        // right associative
+        // right associative (should be able to call functions from its own precedence level - including itself)
         parsePrecedence((Precedence)(rule->precedence));
     } else {
-        // left associative
+        // left associative (only call functions of higher precedence level)
         parsePrecedence((Precedence)(rule->precedence + 1));
     }
 
