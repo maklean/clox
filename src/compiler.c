@@ -70,6 +70,7 @@ typedef struct Compiler {
     int localCount;
     int scopeDepth; // current scope depth
     Upvalue upvalues[UINT8_COUNT];
+    int currLoopStart;
 } Compiler;
 
 typedef struct ClassCompiler {
@@ -153,6 +154,9 @@ static void forStatement();
 
 // Parses a return statement.
 static void returnStatement();
+
+// Parses a continue statement (jumps back to the current loop start)
+static void continueStatement();
 
 // Emits a loop instruction with the given loopStart (where to jump back to) as the instruction operand.
 static void emitLoop(int loopStart);
@@ -326,6 +330,7 @@ static void initCompiler(Compiler *compiler, FunctionType type) {
     compiler->type = type;
     compiler->localCount = 0;
     compiler->scopeDepth = 0;
+    compiler->currLoopStart = -1;
     compiler->function = newFunction();
 
     current = compiler;
@@ -631,6 +636,8 @@ static void statement() {
         whileStatement();
     } else if(match(TOKEN_FOR)) {
         forStatement();
+    } else if(match(TOKEN_CONTINUE)) {
+        continueStatement();
     } else if(match(TOKEN_RETURN)) {
         returnStatement();
     } else {
@@ -674,7 +681,8 @@ static void ifStatement() {
 }
 
 static void whileStatement() {
-    int loopStart = currentChunk()->count; // the offset for the condition (so we can jump back)
+    int previousLoopStart = current->currLoopStart;
+    current->currLoopStart = currentChunk()->count; // the offset for the condition (so we can jump back)
 
     consume(TOKEN_LEFT_PAREN, "Expected '(' after 'while'.");
     expression();
@@ -683,10 +691,11 @@ static void whileStatement() {
     int exitJump = emitJump(OP_JUMP_IF_FALSE);
     emitByte(OP_POP);
     statement();
-    emitLoop(loopStart); // emit a loop instruction if the condition is true
+    emitLoop(current->currLoopStart); // emit a loop instruction if the condition is true
 
     patchJump(exitJump);
     emitByte(OP_POP); // pop condition and exit while-loop if condition is false.
+    current->currLoopStart = previousLoopStart;
 }
 
 static void forStatement() {
@@ -759,6 +768,15 @@ static void returnStatement() {
         consume(TOKEN_SEMICOLON, "Expected ';' after return value.");
         emitByte(OP_RETURN);
     }
+}
+
+static void continueStatement() {
+    if(current->currLoopStart == -1) {
+        error("Can't use 'continue' outside of a loop.");
+    }
+
+    consume(TOKEN_SEMICOLON, "Expected ';' after 'continue'.");
+    emitLoop(current->currLoopStart); // make it go back to the start of the loop
 }
 
 static void emitLoop(int loopStart) {
