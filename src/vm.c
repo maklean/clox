@@ -55,9 +55,6 @@ static bool invoke(ObjString *name, int argCount);
 // Calls the given method from the given class object. Returns whether the call was successful or not.
 static bool invokeFromClass(ObjClass *klass, ObjString *name, int argCount);
 
-// Returns the result of `base`^`exp`.
-static double pow_(double base, double exp);
-
 // Creates a native function
 static void defineNative(const char *name, NativeFn function) {
     push(OBJ_VAL(copyString(name, (int)strlen(name))));
@@ -113,6 +110,16 @@ static InterpretResult run() {
             double b = AS_NUMBER(pop()); \
             double a = AS_NUMBER(pop()); \
             push(valueType(a op b)); \
+        } while(0)
+    #define BINARY_OP_LIBFUNC(valueType, func) \
+        do { \
+            if(!IS_NUMBER(peek(0)) || !IS_NUMBER(peek(1))) { \
+                runtimeError("Expected two number operands at the top of the stack."); \
+                return INTERPRET_RUNTIME_ERROR; \
+            } \
+            double b = AS_NUMBER(pop()); \
+            double a = AS_NUMBER(pop()); \
+            push(valueType(func(a, b))); \
         } while(0)
 
     for(;;) {
@@ -174,32 +181,8 @@ static InterpretResult run() {
             case OP_SUBTRACT: BINARY_OP(NUMBER_VAL, -); break;
             case OP_MULTIPLY: BINARY_OP(NUMBER_VAL, *); break;
             case OP_DIVIDE: BINARY_OP(NUMBER_VAL, /); break;
-
-            case OP_POW: {
-                if(!IS_NUMBER(peek(0)) || !IS_NUMBER(peek(1))) {
-                    runtimeError("Operands must be numbers");
-                    return INTERPRET_RUNTIME_ERROR;
-                }
-
-                double b = AS_NUMBER(pop());
-                double a = AS_NUMBER(pop());
-
-                push(NUMBER_VAL(pow(a, b)));
-                break;
-            }
-
-            case OP_MOD: {
-                if(!IS_NUMBER(peek(0)) || !IS_NUMBER(peek(1))) {
-                    runtimeError("Operands must be numbers");
-                    return INTERPRET_RUNTIME_ERROR;
-                }
-
-                double b = AS_NUMBER(pop());
-                double a = AS_NUMBER(pop());
-
-                push(NUMBER_VAL(fmod(a, b)));
-                break;
-            }
+            case OP_POW: BINARY_OP_LIBFUNC(NUMBER_VAL, pow); break;
+            case OP_MOD: BINARY_OP_LIBFUNC(NUMBER_VAL, fmod); break;
 
             case OP_NEGATE:
                 // Check if the value at the top of the stack is a number.
@@ -495,6 +478,7 @@ static InterpretResult run() {
     #undef READ_STRING
     #undef READ_STRING_LONG
     #undef BINARY_OP
+    #undef BINARY_OP_LIBFUNC
 }
 
 InterpretResult interpret(const char *source) {
