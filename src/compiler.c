@@ -41,8 +41,7 @@ typedef struct {
   Precedence precedence;
 } ParseRule;
 
-// can't use UINT24 limit since it segfaults...
-#define UINT16_COUNT (UINT16_MAX + 1)
+#define UINT8_COUNT (UINT8_MAX + 1)
 
 typedef struct {
     Token name;
@@ -67,10 +66,10 @@ typedef struct Compiler {
     struct Compiler *enclosing; // the enclosing Compiler function
     ObjFunction *function;
     FunctionType type;
-    Local locals[UINT16_COUNT];
+    Local locals[UINT8_COUNT];
     int localCount;
     int scopeDepth; // current scope depth
-    Upvalue upvalues[UINT16_COUNT];
+    Upvalue upvalues[UINT8_COUNT];
 } Compiler;
 
 typedef struct ClassCompiler {
@@ -309,7 +308,7 @@ ParseRule rules[] = {
   [TOKEN_OR]            = {NULL,     or_,    PREC_OR},
   [TOKEN_PRINT]         = {NULL,     NULL,   PREC_NONE},
   [TOKEN_RETURN]        = {NULL,     NULL,   PREC_NONE},
-  [TOKEN_SUPER]         = {super_,     NULL, PREC_NONE},
+  [TOKEN_SUPER]         = {super_,   NULL,   PREC_NONE},
   [TOKEN_THIS]          = {this_,    NULL,   PREC_NONE},
   [TOKEN_TRUE]          = {literal,  NULL,   PREC_NONE},
   [TOKEN_VAR]           = {NULL,     NULL,   PREC_NONE},
@@ -351,8 +350,8 @@ static void initCompiler(Compiler *compiler, FunctionType type) {
 ObjFunction *compile(const char *source) {
     initScanner(source);
 
-    Compiler *compiler = malloc(sizeof(Compiler)); // have to heap-allocate since we support a larger amount of locals and upvalues
-    initCompiler(compiler, TYPE_SCRIPT);
+    Compiler compiler;
+    initCompiler(&compiler, TYPE_SCRIPT);
 
     parser.hadError = false;
     parser.panicMode = false;
@@ -364,7 +363,6 @@ ObjFunction *compile(const char *source) {
     }
 
     ObjFunction *function = endCompiler();
-    free(compiler);
 
     return parser.hadError ? NULL : function;
 }
@@ -930,8 +928,8 @@ static void block() {
 
 static void function(FunctionType type) {
     // each function gets their own Compiler (so we can easily track locals, nested blocks, etc.)
-    Compiler *compiler = malloc(sizeof(Compiler));
-    initCompiler(compiler, type);
+    Compiler compiler;
+    initCompiler(&compiler, type);
 
     beginScope();
 
@@ -969,10 +967,10 @@ static void function(FunctionType type) {
     }
 
     for(int i = 0; i < function->upvalueCount; i++) {
-        int uvIndex = compiler->upvalues[i].index;
+        int uvIndex = compiler.upvalues[i].index;
 
         // 1 if it's a local in the enclosing function, 0 for one of the function's upvalues
-        emitByte((compiler->upvalues[i].isLocal ? 1 : 0) | (uvIndex > 255 ? 2 : 0)); // have to use this byte to indicate whether it's a long uvIndex or not
+        emitByte((compiler.upvalues[i].isLocal ? 1 : 0) | (uvIndex > 255 ? 2 : 0)); // have to use this byte to indicate whether it's a long uvIndex or not
 
         if(uvIndex <= 255) {
             emitByte((uint8_t)uvIndex);
@@ -982,8 +980,6 @@ static void function(FunctionType type) {
             emitByte((uint8_t)(uvIndex & 0xFF));
         }
     }
-
-    free(compiler);
 }
 
 static void method() {
@@ -1127,7 +1123,7 @@ static void declareVariable() {
 }
 
 static void addLocal(Token name) {
-    if(current->localCount == UINT16_COUNT) {
+    if(current->localCount == UINT8_COUNT) {
         error("Too many local variables in function.");
         return;
     }
@@ -1217,7 +1213,7 @@ static int addUpvalue(Compiler *compiler, int index, bool isLocal) {
         }
     }
 
-    if(upvalueCount == UINT16_COUNT) {
+    if(upvalueCount == UINT8_COUNT) {
         error("Too many closure variables in function.");
         return 0;
     }
