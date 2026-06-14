@@ -286,6 +286,8 @@ ParseRule rules[] = {
   [TOKEN_SEMICOLON]     = {NULL,     NULL,   PREC_NONE},
   [TOKEN_SLASH]         = {NULL,     binary, PREC_FACTOR},
   [TOKEN_STAR]          = {NULL,     binary, PREC_FACTOR},
+  [TOKEN_PERCENT]       = {NULL,     binary, PREC_FACTOR},
+  [TOKEN_STAR_STAR]     = {NULL,     binary, PREC_FACTOR},
   [TOKEN_BANG]          = {unary,    NULL,   PREC_NONE},
   [TOKEN_BANG_EQUAL]    = {NULL,     binary, PREC_EQUALITY},
   [TOKEN_EQUAL]         = {NULL,     NULL,   PREC_NONE},
@@ -800,12 +802,21 @@ static void unary(bool canAssign) {
 static void binary(bool canAssign) {
     TokenType operatorType = parser.previous.type;
     ParseRule *rule = getRule(operatorType);
-    parsePrecedence((Precedence)(rule->precedence + 1));
+    
+    if(operatorType == TOKEN_STAR_STAR) {
+        // right associative
+        parsePrecedence((Precedence)(rule->precedence));
+    } else {
+        // left associative
+        parsePrecedence((Precedence)(rule->precedence + 1));
+    }
 
     switch (operatorType) {
         case TOKEN_PLUS: emitByte(OP_ADD); break;
         case TOKEN_MINUS: emitByte(OP_SUBTRACT); break;
         case TOKEN_STAR: emitByte(OP_MULTIPLY); break;
+        case TOKEN_STAR_STAR: emitByte(OP_POW); break;
+        case TOKEN_PERCENT: emitByte(OP_MOD); break;
         case TOKEN_SLASH: emitByte(OP_DIVIDE); break;
         case TOKEN_BANG_EQUAL: emitBytes(OP_EQUAL, OP_NOT); break;
         case TOKEN_EQUAL_EQUAL: emitByte(OP_EQUAL); break;

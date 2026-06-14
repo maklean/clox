@@ -9,7 +9,7 @@ A Bytecode Virtual Machine written in C for the Lox language from [Crafting Inte
 Lox is a pretty small toy language missing some standard language features, this is more of learning project for me
 so I think I'll only add the following:
 - [X] Multi-line comments
-- [ ] More arithmetic operators (pow/`**`, modulo/`%`)
+- [X] More arithmetic operators (pow/`**`, modulo/`%`)
 - [ ] Jump statements (`break`, `continue`)
 - [ ] Arrays
 

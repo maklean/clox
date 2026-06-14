@@ -9,6 +9,7 @@
 #include <stdarg.h>
 #include <string.h>
 #include <time.h>
+#include <math.h>
 
 VM vm;
 
@@ -53,6 +54,9 @@ static bool invoke(ObjString *name, int argCount);
 
 // Calls the given method from the given class object. Returns whether the call was successful or not.
 static bool invokeFromClass(ObjClass *klass, ObjString *name, int argCount);
+
+// Returns the result of `base`^`exp`.
+static double pow_(double base, double exp);
 
 // Creates a native function
 static void defineNative(const char *name, NativeFn function) {
@@ -170,6 +174,32 @@ static InterpretResult run() {
             case OP_SUBTRACT: BINARY_OP(NUMBER_VAL, -); break;
             case OP_MULTIPLY: BINARY_OP(NUMBER_VAL, *); break;
             case OP_DIVIDE: BINARY_OP(NUMBER_VAL, /); break;
+
+            case OP_POW: {
+                if(!IS_NUMBER(peek(0)) || !IS_NUMBER(peek(1))) {
+                    runtimeError("Operands must be numbers");
+                    return INTERPRET_RUNTIME_ERROR;
+                }
+
+                double b = AS_NUMBER(pop());
+                double a = AS_NUMBER(pop());
+
+                push(NUMBER_VAL(pow(a, b)));
+                break;
+            }
+
+            case OP_MOD: {
+                if(!IS_NUMBER(peek(0)) || !IS_NUMBER(peek(1))) {
+                    runtimeError("Operands must be numbers");
+                    return INTERPRET_RUNTIME_ERROR;
+                }
+
+                double b = AS_NUMBER(pop());
+                double a = AS_NUMBER(pop());
+
+                push(NUMBER_VAL(fmod(a, b)));
+                break;
+            }
 
             case OP_NEGATE:
                 // Check if the value at the top of the stack is a number.

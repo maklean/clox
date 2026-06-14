@@ -1,5 +1,7 @@
 DEBUG=true
+
 CC=gcc
+LIBS=-lm
 
 ifeq ($(DEBUG), true)
 	CCFLAGS=-g
@@ -17,7 +19,7 @@ DEPS=$(addprefix $(INCLUDE_DIR)/,chunk.h common.h compiler.h debug.h memory.h ob
 TARGET=clox
 
 $(TARGET): $(OBJECT_FILES)
-	$(CC) $(CCFLAGS) -o $@ $^
+	$(CC) $(CCFLAGS) -o $@ $^ $(LIBS)
 
 $(BUILD_DIR)/%.o: $(SRC_DIR)/%.c $(DEPS)
 	@mkdir -p $(BUILD_DIR)
