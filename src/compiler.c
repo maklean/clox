@@ -771,11 +771,12 @@ static void returnStatement() {
 }
 
 static void continueStatement() {
+    consume(TOKEN_SEMICOLON, "Expected ';' after 'continue'.");
+
     if(current->currLoopStart == -1) {
         error("Can't use 'continue' outside of a loop.");
     }
-
-    consume(TOKEN_SEMICOLON, "Expected ';' after 'continue'.");
+    
     emitLoop(current->currLoopStart); // make it go back to the start of the loop
 }
 
