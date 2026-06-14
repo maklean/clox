@@ -10,7 +10,7 @@ Lox is a pretty small toy language missing some standard language features, this
 so I think I'll only add the following:
 - [X] Multi-line comments
 - [X] More arithmetic operators (pow/`**`, modulo/`%`)
-- [ ] Jump statements (`break`, `continue`)
+- [X] Jump statements (`break`, `continue`)
 - [ ] Arrays
 
 Other than that, I'm planning on adding some additional optimizations to the interpreter, here's what I'm thinking:
