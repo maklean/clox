@@ -712,7 +712,8 @@ static void forStatement() {
         expressionStatement(); // parses the expression + consumes the semicolon and the expression on the VM stack
     }
 
-    int loopStart = currentChunk()->count;
+    int previousLoopStart = current->currLoopStart; // this should be -1 techniocally since we just created the new scope
+    current->currLoopStart = currentChunk()->count;
     int exitJump = -1;
 
     // condition clause
@@ -733,18 +734,20 @@ static void forStatement() {
         emitByte(OP_POP);
         consume(TOKEN_RIGHT_PAREN, "Expected ')' after increment clause.");
 
-        emitLoop(loopStart); // this should loop back to the condition clause
-        loopStart = incrementStart; // this is to make the increment expression run after the body
+        emitLoop(current->currLoopStart); // this should loop back to the condition clause
+        current->currLoopStart = incrementStart; // this is to make the increment expression run after the body
         patchJump(bodyJump);
     }
 
     statement();
-    emitLoop(loopStart); // this should loop back to the increment expression
+    emitLoop(current->currLoopStart); // this should loop back to the increment expression
 
     if(exitJump != -1) {
         patchJump(exitJump); // jump out of the for-loop if the 
         emitByte(OP_POP); // pop condition out
     }
+
+    current->currLoopStart = previousLoopStart;
 
     endScope();
 }
