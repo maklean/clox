@@ -71,6 +71,8 @@ typedef struct Compiler {
     int scopeDepth; // current scope depth
     Upvalue upvalues[UINT8_COUNT];
     int currLoopStart;
+    int breakJumps[UINT8_COUNT];
+    int breakCount;
 } Compiler;
 
 typedef struct ClassCompiler {
@@ -157,6 +159,9 @@ static void returnStatement();
 
 // Parses a continue statement (jumps back to the current loop start)
 static void continueStatement();
+
+// Parses a break statement
+static void breakStatement();
 
 // Emits a loop instruction with the given loopStart (where to jump back to) as the instruction operand.
 static void emitLoop(int loopStart);
@@ -319,6 +324,8 @@ ParseRule rules[] = {
   [TOKEN_TRUE]          = {literal,  NULL,   PREC_NONE},
   [TOKEN_VAR]           = {NULL,     NULL,   PREC_NONE},
   [TOKEN_WHILE]         = {NULL,     NULL,   PREC_NONE},
+  [TOKEN_CONTINUE]      = {NULL,     NULL,   PREC_NONE},
+  [TOKEN_BREAK]         = {NULL,     NULL,   PREC_NONE},
   [TOKEN_ERROR]         = {NULL,     NULL,   PREC_NONE},
   [TOKEN_EOF]           = {NULL,     NULL,   PREC_NONE},
 };
@@ -331,6 +338,7 @@ static void initCompiler(Compiler *compiler, FunctionType type) {
     compiler->localCount = 0;
     compiler->scopeDepth = 0;
     compiler->currLoopStart = -1;
+    compiler->breakCount = 0;
     compiler->function = newFunction();
 
     current = compiler;
@@ -638,6 +646,8 @@ static void statement() {
         forStatement();
     } else if(match(TOKEN_CONTINUE)) {
         continueStatement();
+    } else if(match(TOKEN_BREAK)) {
+        breakStatement();
     } else if(match(TOKEN_RETURN)) {
         returnStatement();
     } else {
@@ -695,6 +705,11 @@ static void whileStatement() {
 
     patchJump(exitJump);
     emitByte(OP_POP); // pop condition and exit while-loop if condition is false.
+
+    // patch the jump for the 'break' statements
+    for(int i = 0; i < current->breakCount; i++) patchJump(current->breakJumps[i]);
+    current->breakCount = 0;
+
     current->currLoopStart = previousLoopStart;
 }
 
@@ -747,6 +762,10 @@ static void forStatement() {
         emitByte(OP_POP); // pop condition out
     }
 
+    // patch the jump for the 'break' statements
+    for(int i = 0; i < current->breakCount; i++) patchJump(current->breakJumps[i]);
+    current->breakCount = 0;
+    
     current->currLoopStart = previousLoopStart;
 
     endScope();
@@ -781,6 +800,21 @@ static void continueStatement() {
     }
     
     emitLoop(current->currLoopStart); // make it go back to the start of the loop
+}
+
+static void breakStatement() {
+    consume(TOKEN_SEMICOLON, "Expected ';' after 'break'.");
+
+    if(current->currLoopStart == -1) {
+        error("Can't use 'break' outside of a loop.");
+    }
+
+    /*
+        need to keep track of an array b/c if there are multiple 'break's 
+        in a loop, the earlier ones won't have their placeholder resolved,
+        and it'll try to jump to 0xFF 0xFF in the VM stack.
+    */
+    current->breakJumps[current->breakCount++] = emitJump(OP_JUMP);
 }
 
 static void emitLoop(int loopStart) {
