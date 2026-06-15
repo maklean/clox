@@ -91,7 +91,6 @@ typedef struct {
 
 #endif
 
-// Constant pool
 typedef struct {
     int capacity;
     int count;

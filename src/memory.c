@@ -169,6 +169,11 @@ static void freeObject(Obj *object) {
         case OBJ_BOUND_METHOD:
             FREE(sizeof(ObjBoundMethod), object);
             break;
+        case OBJ_ARRAY:
+            ObjArray *arr = (ObjArray *)object;
+            freeValueArray(&arr->data);
+            FREE(sizeof(ObjArray), object);
+            break;
     }
 }
 
@@ -274,8 +279,8 @@ static void blackenObject(Obj *object) {
         }
 
         case OBJ_INSTANCE: {
-            ObjInstance* instance = (ObjInstance*)object;
-            markObject((Obj*)instance->klass);
+            ObjInstance *instance = (ObjInstance *)object;
+            markObject((Obj *)instance->klass);
             markTable(&instance->fields);
             break;
         }
@@ -290,6 +295,12 @@ static void blackenObject(Obj *object) {
         case OBJ_NATIVE:
         case OBJ_STRING:
             break;
+        
+        case OBJ_ARRAY: {
+            ObjArray *arr = (ObjArray *)object;
+            markArray(&arr->data);
+            break;
+        }
     }
 }
 

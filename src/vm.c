@@ -468,6 +468,23 @@ static InterpretResult run() {
                 frame = &vm.frames[vm.frameCount - 1];
                 break;
             }
+
+            case OP_ARRAY: {
+                int n = (int)READ_BYTE();
+
+                ObjArray *arr = newArray();
+
+                // there should be n values on the stack (they're in reverse tho)
+                for(int i = n-1; i >= 0; i--) {
+                    writeValueArray(&arr->data, peek(i));
+                }
+
+                vm.stackTop -= n; // remove/pop all n values off the stack
+
+                push(OBJ_VAL(arr));
+
+                break;
+            }
         }
     }
 

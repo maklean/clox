@@ -89,6 +89,8 @@ int disassembleInstruction(Chunk *chunk, int offset) {
             return constantInstruction("OP_SET_GLOBAL", chunk, offset);
         case OP_SET_GLOBAL_LONG:
             return constantInstruction("OP_SET_GLOBAL_LONG", chunk, offset);
+        case OP_ARRAY:
+            return constantInstruction("OP_ARRAY", chunk, offset);
         case OP_GET_LOCAL:
             return byteInstruction("OP_GET_LOCAL", chunk, offset);
         case OP_GET_LOCAL_LONG:
@@ -206,7 +208,8 @@ static int constantInstruction(const char *name, Chunk *chunk, int offset) {
         strcmp(name, "OP_GET_PROPERTY") == 0 ||
         strcmp(name, "OP_SET_PROPERTY") == 0 ||
         strcmp(name, "OP_METHOD") == 0 ||
-        strcmp(name, "OP_GET_SUPER") == 0
+        strcmp(name, "OP_GET_SUPER") == 0 ||
+        strcmp(name, "OP_ARRAY") == 0
     ) {
         constant = chunk->code[offset+1];
         offset_skip = 2;

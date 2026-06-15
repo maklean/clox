@@ -217,6 +217,9 @@ static void function(FunctionType type);
 // Parses a class method body.
 static void method();
 
+// Parses an array.
+static void array(bool canAssign);
+
 // Increments the global scope depth (called on entering a new scope)
 static void beginScope();
 
@@ -327,6 +330,8 @@ ParseRule rules[] = {
   [TOKEN_CONTINUE]      = {NULL,     NULL,   PREC_NONE},
   [TOKEN_BREAK]         = {NULL,     NULL,   PREC_NONE},
   [TOKEN_ERROR]         = {NULL,     NULL,   PREC_NONE},
+  [TOKEN_LEFT_ARRAY]    = {array,    NULL,   PREC_PRIMARY},
+  [TOKEN_RIGHT_ARRAY]   = {NULL,     NULL,   PREC_NONE},
   [TOKEN_EOF]           = {NULL,     NULL,   PREC_NONE},
 };
 
@@ -765,7 +770,7 @@ static void forStatement() {
     // patch the jump for the 'break' statements
     for(int i = 0; i < current->breakCount; i++) patchJump(current->breakJumps[i]);
     current->breakCount = 0;
-    
+
     current->currLoopStart = previousLoopStart;
 
     endScope();
@@ -1069,6 +1074,27 @@ static void method() {
     } else {
         emitLongBytes(OP_METHOD_LONG, constant);
     }
+}
+
+static void array(bool canAssign) {
+    uint8_t itemCount = 0;
+
+    if(!check(TOKEN_RIGHT_ARRAY)) {
+        do {
+            expression();
+
+            if(itemCount == 255) {
+                error("Can't initialize array with >255 literals.");
+            }
+            
+            itemCount++;
+        } while(match(TOKEN_COMMA));
+    }
+
+    consume(TOKEN_RIGHT_ARRAY, "Expected ']' after array elements.");
+
+    // TODO: make OP_ARRAY_LONG to support more values in array init.
+    emitBytes(OP_ARRAY, itemCount);
 }
 
 static void beginScope() {

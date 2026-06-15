@@ -30,6 +30,9 @@
 // Returns whether the type of the value is a bound method.
 #define IS_BOUND_METHOD(value) isObjType(value, OBJ_BOUND_METHOD)
 
+// Returns whether the type of the value is an array.
+#define IS_ARRAY(value) isObjType(value, OBJ_ARRAY)
+
 // Returns the value as an `ObjString *`
 #define AS_STRING(value) ((ObjString *)AS_OBJ(value))
 
@@ -54,6 +57,9 @@
 // Returns the value as an `ObjBoundMethod *`
 #define AS_BOUND_METHOD(value) ((ObjBoundMethod *)AS_OBJ(value))
 
+// Returns the value as an `ObjArray *`
+#define AS_ARRAY(value) ((ObjArray *)AS_OBJ(value))
+
 typedef enum {
     OBJ_FUNCTION,
     OBJ_STRING,
@@ -63,6 +69,7 @@ typedef enum {
     OBJ_CLASS,
     OBJ_INSTANCE,
     OBJ_BOUND_METHOD,
+    OBJ_ARRAY,
 } ObjType;
 
 struct Obj {
@@ -118,6 +125,11 @@ typedef struct {
     ObjClosure *method;
 } ObjBoundMethod;
 
+typedef struct {
+    Obj obj;
+    ValueArray data;
+} ObjArray;
+
 typedef Value (*NativeFn)(int argCount, Value *args);
 
 typedef struct {
@@ -145,6 +157,9 @@ ObjInstance *newInstance(ObjClass *klass);
 
 // Heap-allocates a new `ObjBoundMethod` struct.
 ObjBoundMethod *newBoundMethod(Value receiver, ObjClosure *method);
+
+// Heap-allocates a new `ObjArray` struct.
+ObjArray *newArray();
 
 // Allocates a heap-allocated `ObjString` made from 'chars' and 'length'.
 ObjString *takeString(char *chars, int length);

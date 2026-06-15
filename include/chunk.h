@@ -60,6 +60,7 @@ typedef enum {
     OP_GET_SUPER_LONG,
     OP_SUPER_INVOKE,
     OP_SUPER_INVOKE_LONG,
+    OP_ARRAY,
     OP_RETURN
 } OpCode;
 

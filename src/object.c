@@ -24,6 +24,9 @@ static uint32_t hashString(const char *key, int length);
 // Prints the given function to the console.
 static void printFunction(ObjFunction *function);
 
+// Prints the elements of the given array.
+static void printArray(ObjArray *array);
+
 ObjFunction *newFunction() {
     ObjFunction *function = (ObjFunction *)ALLOCATE_OBJ(sizeof(ObjFunction), OBJ_FUNCTION);
 
@@ -96,6 +99,14 @@ ObjBoundMethod *newBoundMethod(Value receiver, ObjClosure *method) {
     return bound;
 }
 
+ObjArray *newArray() {
+    ObjArray *arr = (ObjArray *)ALLOCATE_OBJ(sizeof(ObjArray), OBJ_ARRAY);
+
+    initValueArray(&arr->data);
+
+    return arr;
+}
+
 ObjString *takeString(char *chars, int length) {
     uint32_t hash = hashString(chars, length);
 
@@ -149,6 +160,9 @@ void printObject(Value value) {
             break;
         case OBJ_BOUND_METHOD:
             printFunction(AS_BOUND_METHOD(value)->method->function);
+            break;
+        case OBJ_ARRAY:
+            printArray(AS_ARRAY(value));
             break;
     }
 }
@@ -204,4 +218,18 @@ static void printFunction(ObjFunction *function) {
     }
     
     printf("<fn %s>", function->name->chars);
+}
+
+static void printArray(ObjArray *array) {
+    int n = array->data.count;
+
+    printf("[");
+
+    for(int i = 0; i < n; i++) {
+        printValue(array->data.values[i]);
+
+        if(i != n-1) printf(", ");
+    }
+
+    printf("]");
 }
