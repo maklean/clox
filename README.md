@@ -17,8 +17,8 @@ so I think I'll only add the following:
     - [X] Indexing into arrays
     - [X] Assigning at array indices
 - [ ] Type methods
-    - Array methods (`arr.push()`, `arr.len()`, `arr.pop()`, etc.)
-    - String methods (`str.push_str()`, `str.len()`, `str.replace()`, etc.)
+    - [ ] Array methods (`arr.push()`, `arr.len()`, `arr.pop()`, etc.)
+    - [ ] String methods (`str.push_str()`, `str.len()`, `str.replace()`, etc.)
 
 Other than that, I'm planning on adding some additional optimizations to the interpreter, here's what I'm thinking:
 
