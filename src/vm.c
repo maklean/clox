@@ -499,8 +499,13 @@ static InterpretResult run() {
                     return INTERPRET_RUNTIME_ERROR;
                 }
 
-                // TODO: should probably check if they passed in a double or something...
-                int index = (int)AS_NUMBER(pop());
+                double val_index = AS_NUMBER(pop());
+                if(floor(val_index) != val_index) {
+                    runtimeError("Index has to be a whole number.");
+                    return INTERPRET_RUNTIME_ERROR;
+                }
+
+                int index = (int)val_index;
                 ObjArray *arr = (ObjArray *)AS_ARRAY(pop());
 
                 int n = arr->data.count;
@@ -528,7 +533,15 @@ static InterpretResult run() {
                 }
 
                 Value value = pop();
-                int index = (int)AS_NUMBER(pop());
+                
+                double val_index = AS_NUMBER(pop());
+                if(floor(val_index) != val_index) {
+                    runtimeError("Index has to be a whole number.");
+                    return INTERPRET_RUNTIME_ERROR;
+                }
+
+                int index = (int)val_index;
+
                 ObjArray *arr = (ObjArray *)AS_ARRAY(pop());
 
                 int n = arr->data.count;
