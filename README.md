@@ -12,6 +12,9 @@ so I think I'll only add the following:
 - [X] More arithmetic operators (pow/`**`, modulo/`%`)
 - [X] Jump statements (`break`, `continue`)
 - [ ] Arrays
+    - [X] Initializing Arrays
+    - [X] Printing Arrays
+    - [ ] Indexing into Arrays
 
 Other than that, I'm planning on adding some additional optimizations to the interpreter, here's what I'm thinking:
 

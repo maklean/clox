@@ -473,13 +473,14 @@ static InterpretResult run() {
                 int n = (int)READ_BYTE();
 
                 ObjArray *arr = newArray();
+                push(OBJ_VAL(arr)); // array will resize while adding elements so we need to add it so the GC doesn't clean it
 
                 // there should be n values on the stack (they're in reverse tho)
-                for(int i = n-1; i >= 0; i--) {
+                for(int i = n; i >= 1; i--) {
                     writeValueArray(&arr->data, peek(i));
                 }
 
-                vm.stackTop -= n; // remove/pop all n values off the stack
+                vm.stackTop -= n + 1; // remove/pop all n values off the stack + array object
 
                 push(OBJ_VAL(arr));
 
