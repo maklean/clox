@@ -11,10 +11,14 @@ so I think I'll only add the following:
 - [X] Multi-line comments
 - [X] More arithmetic operators (pow/`**`, modulo/`%`)
 - [X] Jump statements (`break`, `continue`)
-- [ ] Arrays
-    - [X] Initializing Arrays
-    - [X] Printing Arrays
-    - [ ] Indexing into Arrays
+- [X] Arrays
+    - [X] Initializing arrays
+    - [X] Printing arrays
+    - [X] Indexing into arrays
+    - [X] Assigning at array indices
+- [ ] Type methods
+    - Array methods (`arr.push()`, `arr.len()`, `arr.pop()`, etc.)
+    - String methods (`str.push_str()`, `str.len()`, `str.replace()`, etc.)
 
 Other than that, I'm planning on adding some additional optimizations to the interpreter, here's what I'm thinking:
 

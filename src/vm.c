@@ -486,6 +486,64 @@ static InterpretResult run() {
 
                 break;
             }
+
+            case OP_INDEX: {
+                // the array's object and the index should be sitting on the stack
+                if(!IS_NUMBER(peek(0))) {
+                    runtimeError("Index has to be a number.");
+                    return INTERPRET_RUNTIME_ERROR;
+                }
+
+                if(!IS_ARRAY(peek(1))) {
+                    runtimeError("Can only index into an array.");
+                    return INTERPRET_RUNTIME_ERROR;
+                }
+
+                // TODO: should probably check if they passed in a double or something...
+                int index = (int)AS_NUMBER(pop());
+                ObjArray *arr = (ObjArray *)AS_ARRAY(pop());
+
+                int n = arr->data.count;
+
+                // check for out-of-bounds access
+                if(index < 0 || index >= n) {
+                    runtimeError("Attempted out-of-bounds access into array.");
+                    return INTERPRET_RUNTIME_ERROR;
+                }
+
+                push(arr->data.values[index]);
+                break;
+            };
+
+            case OP_SET_INDEX: {
+                // value should be at the top of the stack, the index should follow, last should be the array object
+                if(!IS_NUMBER(peek(1))) {
+                    runtimeError("Index has to be a number.");
+                    return INTERPRET_RUNTIME_ERROR;
+                }
+
+                if(!IS_ARRAY(peek(2))) {
+                    runtimeError("Can only index into an array.");
+                    return INTERPRET_RUNTIME_ERROR;
+                }
+
+                Value value = pop();
+                int index = (int)AS_NUMBER(pop());
+                ObjArray *arr = (ObjArray *)AS_ARRAY(pop());
+
+                int n = arr->data.count;
+
+                if(index < 0 || index >= n) {
+                    runtimeError("Attempted out-of-bounds access into array.");
+                    return INTERPRET_RUNTIME_ERROR;
+                }
+
+                arr->data.values[index] = value;
+                
+                // since it's an assignment, its result should be the value
+                push(value);
+                break;
+            }
         }
     }
 

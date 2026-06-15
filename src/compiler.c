@@ -190,6 +190,9 @@ static void call(bool canAssign);
 // Parses a get/set expression.
 static void dot(bool canAssign);
 
+// Parses an array index.
+static void index_(bool canAssign);
+
 // Parses a string.
 static void string(bool canAssign);
 
@@ -330,7 +333,7 @@ ParseRule rules[] = {
   [TOKEN_CONTINUE]      = {NULL,     NULL,   PREC_NONE},
   [TOKEN_BREAK]         = {NULL,     NULL,   PREC_NONE},
   [TOKEN_ERROR]         = {NULL,     NULL,   PREC_NONE},
-  [TOKEN_LEFT_ARRAY]    = {array,    NULL,   PREC_PRIMARY},
+  [TOKEN_LEFT_ARRAY]    = {array,    index_, PREC_PRIMARY},
   [TOKEN_RIGHT_ARRAY]   = {NULL,     NULL,   PREC_NONE},
   [TOKEN_EOF]           = {NULL,     NULL,   PREC_NONE},
 };
@@ -919,6 +922,18 @@ static void dot(bool canAssign) {
         emitByte(argCount);
     } else {
         name <= 255 ? emitBytes(OP_GET_PROPERTY, (uint8_t)name) : emitLongBytes(OP_GET_PROPERTY_LONG, name);
+    }
+}
+
+static void index_(bool canAssign) {
+    expression();
+    consume(TOKEN_RIGHT_ARRAY, "Expected ']' after array indexing.");
+
+    if(canAssign && match(TOKEN_EQUAL)) {
+        expression();
+        emitByte(OP_SET_INDEX);
+    } else {
+        emitByte(OP_INDEX);
     }
 }
 
