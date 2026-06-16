@@ -21,10 +21,10 @@ so I think I'll only add the following:
     <summary>Array methods (<code>arr.push()</code>, <code>arr.pop()</code>, <code>arr.len()</code>, etc.)</summary>
 
     - [X] `arr.len()`
-    - [ ] `arr.push(val)`
+    - [X] `arr.push(val)`
     - [X] `arr.pop()`
-    - [ ] `arr.get(i)`
-    - [ ] `arr.set(i, val)`
+    - [X] `arr.get(i)`
+    - [X] `arr.set(i, val)`
     - [ ] `arr.insert(i, val)`
     - [ ] `arr.remove(i)`
     - [ ] `arr.contains(val)`
@@ -33,9 +33,9 @@ so I think I'll only add the following:
     - [ ] `arr.concat(other)`
     - [ ] `arr.reverse()`
     - [ ] `arr.join(sep)`
-    - [ ] `arr.clear()`
-    - [ ] `arr.isEmpty()`
-    - [ ] `arr.copy()`
+    - [X] `arr.clear()`
+    - [X] `arr.isEmpty()`
+    - [X] `arr.copy()` (shallow copy)
 
     </details>
     <details>
