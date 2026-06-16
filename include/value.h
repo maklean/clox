@@ -106,6 +106,9 @@ void writeValueArray(ValueArray *array, Value value);
 // Inserts at the given index in the value array.
 void insertValueArray(ValueArray *array, Value value, size_t index);
 
+// Removes at the given index in the value array.
+void removeValueArray(ValueArray *array, size_t index);
+
 // Frees the value array's data from memory.
 void freeValueArray(ValueArray* array);
 

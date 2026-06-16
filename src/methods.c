@@ -7,6 +7,8 @@
 
 extern VM vm;
 
+#define MIN(a, b) ((a) < (b) ? (a) : (b))
+
 // Checks if the argument count matches the expected count. `argCount` and `expected` should be literals with no side effects.
 #define CHECK_ARGUMENT_COUNT(argCount, expected, method) \
     do { \
@@ -44,6 +46,10 @@ static bool array_push(int argCount, Value *args, Value *result);
 static bool array_get(int argCount, Value *args, Value *result);
 static bool array_set(int argCount, Value *args, Value *result);
 static bool array_insert(int argCount, Value *args, Value *result);
+static bool array_remove(int argCount, Value *args, Value *result);
+static bool array_contains(int argCount, Value *args, Value *result);
+static bool array_indexOf(int argCount, Value *args, Value *result);
+static bool array_slice(int argCount, Value *args, Value *result);
 static bool array_clear(int argCount, Value *args, Value *result);
 static bool array_isEmpty(int argCount, Value *args, Value *result);
 static bool array_copy(int argCount, Value *args, Value *result);
@@ -55,6 +61,10 @@ void initMethods(Table *arrMethods, Table *strMethods) {
     defineTypeMethod(arrMethods, "get", array_get);
     defineTypeMethod(arrMethods, "set", array_set);
     defineTypeMethod(arrMethods, "insert", array_insert);
+    defineTypeMethod(arrMethods, "remove", array_remove);
+    defineTypeMethod(arrMethods, "contains", array_contains);
+    defineTypeMethod(arrMethods, "indexOf", array_indexOf);
+    defineTypeMethod(arrMethods, "slice", array_slice);
     defineTypeMethod(arrMethods, "clear", array_clear);
     defineTypeMethod(arrMethods, "isEmpty", array_isEmpty);
     defineTypeMethod(arrMethods, "copy", array_copy);
@@ -159,6 +169,101 @@ static bool array_insert(int argCount, Value *args, Value *result) {
     CHECK_OUT_OF_BOUNDS(index, n, "arr.insert(i, val)");
 
     insertValueArray(&arr->data, args[2], index);
+    return true;
+}
+
+static bool array_remove(int argCount, Value *args, Value *result) {
+    CHECK_ARGUMENT_COUNT(argCount, 1, "arr.remove(i)");
+
+    ObjArray *arr = AS_ARRAY(args[0]);
+    double val_index = AS_NUMBER(args[1]);
+
+    CHECK_VALID_INDEX(val_index, "arr.remove(i)");
+
+    int index = (int)val_index;
+    int n = arr->data.count;
+
+    CHECK_OUT_OF_BOUNDS(index, n, "arr.remove(i)");
+
+    removeValueArray(&arr->data, index);
+    return true;
+}
+
+static bool array_contains(int argCount, Value *args, Value *result) {
+    CHECK_ARGUMENT_COUNT(argCount, 1, "arr.contains(val)");
+
+    ObjArray *arr = AS_ARRAY(args[0]);
+    Value value = args[1];
+
+    for(int i = 0; i < arr->data.count; i++) {
+        if(valuesEqual(value, arr->data.values[i])) {
+            *result = TRUE_VAL;
+            return true;
+        }
+    }
+
+    *result = FALSE_VAL;
+    return true;
+}
+
+static bool array_indexOf(int argCount, Value *args, Value *result) {
+    CHECK_ARGUMENT_COUNT(argCount, 1, "arr.indexOf(val)");
+
+    ObjArray *arr = AS_ARRAY(args[0]);
+    Value value = args[1];
+
+    for(int i = 0; i < arr->data.count; i++) {
+        if(valuesEqual(value, arr->data.values[i])) {
+            *result = NUMBER_VAL(i);
+            return true;
+        }
+    }
+
+    *result = NUMBER_VAL(-1);
+    return true;
+}
+
+static bool array_slice(int argCount, Value *args, Value *result) {
+    if(argCount == 0) {
+        CHECK_ARGUMENT_COUNT(argCount, 1, "arr.slice(a, b=n)");
+    } else if(argCount > 2) {
+        CHECK_ARGUMENT_COUNT(argCount, 2, "arr.slice(a, b=n)");
+    }
+
+    ObjArray *arr = AS_ARRAY(args[0]);
+    int n = arr->data.count;
+
+    double val_index_a = AS_NUMBER(args[1]);
+    double val_index_b = argCount == 1 ? n : AS_NUMBER(args[2]);
+
+    CHECK_VALID_INDEX(val_index_a, "arr.slice(a, b=n)");
+    CHECK_VALID_INDEX(val_index_b, "arr.slice(a, b=n)");
+
+    // these should be clamped if they're out-of-bounds towards the right
+    int index_a = MIN((int)val_index_a, n);
+    int index_b = MIN((int)val_index_b, n);
+
+    // check for negative indexes
+    CHECK_OUT_OF_BOUNDS(index_a, n+1, "arr.slice(a, b=n)");
+    CHECK_OUT_OF_BOUNDS(index_b, n+1, "arr.slice(a, b=n)");
+    
+    if(index_b < index_a) {
+        runtimeError("index b cannot be smaller than index a in arr.slice(a, b=n).");
+        return false;
+    }
+
+    // atp, everything should be in the correct state to start copying: index_a <= index_b, index_a & index_b are in [0, n]
+    ObjArray *slicedArray = newArray();
+
+    push(OBJ_VAL(slicedArray)); // prevent GC bugs
+
+    for(int i = index_a; i < index_b; i++) {
+        writeValueArray(&slicedArray->data, arr->data.values[i]);
+    }
+
+    pop();
+
+    *result = OBJ_VAL(slicedArray);
     return true;
 }
 

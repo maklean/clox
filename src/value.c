@@ -38,6 +38,15 @@ void insertValueArray(ValueArray *array, Value value, size_t index) {
     array->count++;
 }
 
+void removeValueArray(ValueArray *array, size_t index) {
+    // shift all values from [index+1, array->len-1] to the left
+    for(size_t i = index+1; i < array->count; i++) {
+        array->values[i-1] = array->values[i];
+    }
+    
+    array->count--;
+}
+
 void freeValueArray(ValueArray *array) {
     FREE_ARRAY(sizeof(Value), array->values, array->capacity);
     

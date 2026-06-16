@@ -26,10 +26,10 @@ so I think I'll only add the following:
     - [X] `arr.get(i)`
     - [X] `arr.set(i, val)`
     - [X] `arr.insert(i, val)`
-    - [ ] `arr.remove(i)`
-    - [ ] `arr.contains(val)`
-    - [ ] `arr.indexOf(val)`
-    - [ ] `arr.slice(a, b)`
+    - [X] `arr.remove(i)`
+    - [X] `arr.contains(val)`
+    - [X] `arr.indexOf(val)`
+    - [X] `arr.slice(a, b)`
     - [ ] `arr.concat(other)`
     - [ ] `arr.reverse()`
     - [ ] `arr.join(sep)`
