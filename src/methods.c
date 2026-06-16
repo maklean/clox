@@ -99,9 +99,8 @@ static bool array_push(int argCount, Value *args, Value *result) {
     ObjArray *arr = AS_ARRAY(args[0]);
     Value value = args[1];
 
-    push(value); // prevent GC bugs
+    // 'value' is already on the stack, so no need for push-pop to prevent the GC from accidentally cleaning it up
     writeValueArray(&arr->data, value);
-    pop();
 
     return true;
 }
