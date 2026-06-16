@@ -82,6 +82,7 @@ void collectGarbage() {
 
     markRoots();
     traceReferences();
+    tableRemoveWhite(&vm.strings);
     sweep();
 
     // set next threshold.

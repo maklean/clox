@@ -50,6 +50,9 @@ static bool array_remove(int argCount, Value *args, Value *result);
 static bool array_contains(int argCount, Value *args, Value *result);
 static bool array_indexOf(int argCount, Value *args, Value *result);
 static bool array_slice(int argCount, Value *args, Value *result);
+static bool array_concat(int argCount, Value *args, Value *result);
+static bool array_reverse(int argCount, Value *args, Value *result);
+static bool array_join(int argCount, Value *args, Value *result);
 static bool array_clear(int argCount, Value *args, Value *result);
 static bool array_isEmpty(int argCount, Value *args, Value *result);
 static bool array_copy(int argCount, Value *args, Value *result);
@@ -65,6 +68,9 @@ void initMethods(Table *arrMethods, Table *strMethods) {
     defineTypeMethod(arrMethods, "contains", array_contains);
     defineTypeMethod(arrMethods, "indexOf", array_indexOf);
     defineTypeMethod(arrMethods, "slice", array_slice);
+    defineTypeMethod(arrMethods, "concat", array_concat);
+    defineTypeMethod(arrMethods, "reverse", array_reverse);
+    defineTypeMethod(arrMethods, "join", array_join);
     defineTypeMethod(arrMethods, "clear", array_clear);
     defineTypeMethod(arrMethods, "isEmpty", array_isEmpty);
     defineTypeMethod(arrMethods, "copy", array_copy);
@@ -264,6 +270,110 @@ static bool array_slice(int argCount, Value *args, Value *result) {
     pop();
 
     *result = OBJ_VAL(slicedArray);
+    return true;
+}
+
+static bool array_concat(int argCount, Value *args, Value *result) {
+    CHECK_ARGUMENT_COUNT(argCount, 1, "arr.concat(other)");
+
+    ObjArray *arr = AS_ARRAY(args[0]);
+    Value other_val = args[1];
+
+    if(!IS_ARRAY(other_val)) {
+        runtimeError("Can only concatenate with another array in array.concat(other).");
+        return false;
+    }
+
+    ObjArray *other = AS_ARRAY(other_val);
+    int n = other->data.count;
+
+    for(int i = 0; i < n; i++) {
+        writeValueArray(&arr->data, other->data.values[i]);
+    }
+
+    return true;
+}
+
+static bool array_reverse(int argCount, Value *args, Value *result) {
+    CHECK_ARGUMENT_COUNT(argCount, 0, "arr.reverse()");
+
+    ObjArray *arr = AS_ARRAY(args[0]);
+
+    // +150 LeetCode problems solved have prepared me for this exact moment...
+    int l = 0;
+    int r = arr->data.count-1;
+
+    Value tmp;
+    while(l < r) {
+        tmp = arr->data.values[l];
+        arr->data.values[l] = arr->data.values[r];
+        arr->data.values[r] = tmp;
+
+        l++;
+        r--;
+    }
+
+    // Clean solution, O(n) time complexity, O(1) space, still no FAANG offer.
+
+    return true;
+}
+
+#include <stdio.h>
+
+static bool array_join(int argCount, Value *args, Value *result) {
+    CHECK_ARGUMENT_COUNT(argCount, 1, "arr.join(sep)");
+
+    ObjArray *arr = AS_ARRAY(args[0]);
+    Value sep_val = args[1];
+
+    if(!IS_STRING(sep_val)) {
+        runtimeError("Seperator must be a string in arr.join(sep).");
+        return false;
+    }
+
+    int n = arr->data.count;
+
+    // ensure n >= 1
+    if(n == 0) {
+        *result = OBJ_VAL(copyString("", 0));
+        return true;
+    }
+
+    size_t arr_char_count = 0;
+    for(int i = 0; i < n; i++) {
+        // check for any non-string values in the array - basically what Python does
+        if(!IS_STRING(arr->data.values[i])) {
+            runtimeError("Expected string at index %d when joining array.", i);
+            return false;
+        }
+
+        arr_char_count += (AS_STRING(arr->data.values[i]))->length;
+    }
+
+    ObjString *sep = AS_STRING(sep_val);
+    size_t sep_n = sep->length;
+
+    size_t result_str_n = arr_char_count + sep_n * (n-1);
+    char result_str[result_str_n];
+    
+    char *ptr = result_str; // cursor into result_str
+    ObjString *s;
+
+    for(int i = 0; i < n; i++) {
+        s = AS_STRING(arr->data.values[i]);
+
+        memcpy(ptr, s->chars, s->length); // copy chars from 's' where 'ptr'
+        ptr += (uintptr_t)s->length; // move to where seperator has to go
+
+        // add seperator if we're between elements
+        if(i != n-1) {
+            memcpy(ptr, sep->chars, sep_n);
+            ptr += sep_n;
+        }
+    }
+
+    *result = OBJ_VAL(copyString(result_str, result_str_n));
+
     return true;
 }
 

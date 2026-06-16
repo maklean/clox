@@ -29,10 +29,10 @@ so I think I'll only add the following:
     - [X] `arr.remove(i)`
     - [X] `arr.contains(val)`
     - [X] `arr.indexOf(val)`
-    - [X] `arr.slice(a, b)`
-    - [ ] `arr.concat(other)`
-    - [ ] `arr.reverse()`
-    - [ ] `arr.join(sep)`
+    - [X] `arr.slice(a, b=n)`
+    - [X] `arr.concat(other)`
+    - [X] `arr.reverse()`
+    - [X] `arr.join(sep)`
     - [X] `arr.clear()`
     - [X] `arr.isEmpty()`
     - [X] `arr.copy()` (shallow copy)
