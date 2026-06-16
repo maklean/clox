@@ -6,6 +6,15 @@
 
 extern VM vm;
 
+// Checks if the argument count matches the expected count. `argCount` and `expected` should be literals with no side effects.
+#define CHECK_ARGUMENT_COUNT(argCount, expected, method) \
+    do { \
+        if(argCount != expected) { \
+            runtimeError("%s expected %d arguments, received %d.", method, expected, argCount); \
+            return false; \
+        } \
+    } while(0)
+
 // Defines the given type method on the given hash table.
 static void defineTypeMethod(Table *table, const char *name, TypeMethod fnc);
 
@@ -30,10 +39,7 @@ static void defineTypeMethod(Table *table, const char *name, TypeMethod fnc) {
 }
 
 static bool array_len(int argCount, Value *args, Value *result) {
-    if(argCount != 0) {
-        runtimeError("arr.len() was passed more than 0 arguments.");
-        return false;
-    }
+    CHECK_ARGUMENT_COUNT(argCount, 0, "arr.len()");
 
     *result = NUMBER_VAL((AS_ARRAY(args[0]))->data.count);
 
@@ -41,10 +47,7 @@ static bool array_len(int argCount, Value *args, Value *result) {
 }
 
 static bool array_pop(int argCount, Value *args, Value *result) {
-    if(argCount != 0) {
-        runtimeError("arr.pop() was passed more than 0 arguments.");
-        return false;
-    }
+    CHECK_ARGUMENT_COUNT(argCount, 0, "arr.pop()");
 
     ObjArray *arr = AS_ARRAY(args[0]);
 
