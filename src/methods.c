@@ -29,11 +29,12 @@ static void defineTypeMethod(Table *table, const char *name, TypeMethod fnc) {
 
 static bool array_len(int argCount, Value *args, Value *result) {
     if(argCount != 0) {
-        runtimeError("Hell nah.");
+        runtimeError("arr.len() was passed more than 0 arguments.");
+        *result = NIL_VAL; // not really necessary, but good practice ig
         return false;
     }
 
     *result = NUMBER_VAL((AS_ARRAY(args[0]))->data.count);
-    
+
     return true;
 }
