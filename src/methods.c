@@ -32,7 +32,6 @@ static void defineTypeMethod(Table *table, const char *name, TypeMethod fnc) {
 static bool array_len(int argCount, Value *args, Value *result) {
     if(argCount != 0) {
         runtimeError("arr.len() was passed more than 0 arguments.");
-        *result = NIL_VAL; // not really necessary, but good practice ig
         return false;
     }
 
@@ -44,7 +43,6 @@ static bool array_len(int argCount, Value *args, Value *result) {
 static bool array_pop(int argCount, Value *args, Value *result) {
     if(argCount != 0) {
         runtimeError("arr.pop() was passed more than 0 arguments.");
-        *result = NIL_VAL;
         return false;
     }
 
@@ -52,7 +50,6 @@ static bool array_pop(int argCount, Value *args, Value *result) {
 
     if(arr->data.count == 0) {
         runtimeError("cannot arr.pop() on empty array.");
-        *result = NIL_VAL;
         return false;
     }
 

@@ -842,7 +842,7 @@ static bool invokeArray(ObjString *name, int argCount) {
     }
 
     TypeMethod methodFn = AS_TYPE_METHOD(fncVal);
-    Value result;
+    Value result = NIL_VAL;
 
     bool ok = methodFn(argCount, vm.stackTop - argCount - 1, &result);
     vm.stackTop -= argCount + 1; // remove arguments + array object
