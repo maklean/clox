@@ -22,6 +22,22 @@ void writeValueArray(ValueArray *array, Value value) {
     array->values[array->count++] = value;
 }
 
+void insertValueArray(ValueArray *array, Value value, size_t index) {
+    if(array->count >= array->capacity) {
+        int oldCapacity = array->capacity;
+        array->capacity = GROW_CAPACITY(oldCapacity);
+        array->values = (Value *)GROW_ARRAY(sizeof(Value), array->values, oldCapacity, array->capacity);
+    }
+
+    // shift all values from [index, array->len-1] to the right
+    for(size_t i = array->count; i > index; i--) {
+        array->values[i] = array->values[i-1];
+    }
+
+    array->values[index] = value;
+    array->count++;
+}
+
 void freeValueArray(ValueArray *array) {
     FREE_ARRAY(sizeof(Value), array->values, array->capacity);
     

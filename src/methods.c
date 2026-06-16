@@ -43,6 +43,7 @@ static bool array_pop(int argCount, Value *args, Value *result);
 static bool array_push(int argCount, Value *args, Value *result);
 static bool array_get(int argCount, Value *args, Value *result);
 static bool array_set(int argCount, Value *args, Value *result);
+static bool array_insert(int argCount, Value *args, Value *result);
 static bool array_clear(int argCount, Value *args, Value *result);
 static bool array_isEmpty(int argCount, Value *args, Value *result);
 static bool array_copy(int argCount, Value *args, Value *result);
@@ -53,6 +54,7 @@ void initMethods(Table *arrMethods, Table *strMethods) {
     defineTypeMethod(arrMethods, "push", array_push);
     defineTypeMethod(arrMethods, "get", array_get);
     defineTypeMethod(arrMethods, "set", array_set);
+    defineTypeMethod(arrMethods, "insert", array_insert);
     defineTypeMethod(arrMethods, "clear", array_clear);
     defineTypeMethod(arrMethods, "isEmpty", array_isEmpty);
     defineTypeMethod(arrMethods, "copy", array_copy);
@@ -138,6 +140,29 @@ static bool array_set(int argCount, Value *args, Value *result) {
     return true;
 }
 
+static bool array_insert(int argCount, Value *args, Value *result) {
+    CHECK_ARGUMENT_COUNT(argCount, 2, "arr.insert(i, val)");
+
+    ObjArray *arr = AS_ARRAY(args[0]);
+    double val_index = AS_NUMBER(args[1]);
+
+    CHECK_VALID_INDEX(val_index, "arr.insert(i, val)");
+
+    int index = (int)val_index;
+    int n = arr->data.count;
+
+    // perform push() if adding at the array length
+    if(index == n) {
+        writeValueArray(&arr->data, args[2]);
+        return true;
+    }
+
+    CHECK_OUT_OF_BOUNDS(index, n, "arr.insert(i, val)");
+
+    insertValueArray(&arr->data, args[2], index);
+    return true;
+}
+
 static bool array_clear(int argCount, Value *args, Value *result) {
     CHECK_ARGUMENT_COUNT(argCount, 0, "arr.clear()");
 
@@ -161,7 +186,7 @@ static bool array_copy(int argCount, Value *args, Value *result) {
 
     ObjArray *arr = AS_ARRAY(args[0]);
     ObjArray *copy_arr = newArray();
-    
+
     push(OBJ_VAL(copy_arr)); // prevent GC bugs
 
     // only a shallow copy

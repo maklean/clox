@@ -101,7 +101,10 @@ typedef struct {
 void initValueArray(ValueArray *array);
 
 // Writes to the given value array.
-void writeValueArray(ValueArray* array, Value value);
+void writeValueArray(ValueArray *array, Value value);
+
+// Inserts at the given index in the value array.
+void insertValueArray(ValueArray *array, Value value, size_t index);
 
 // Frees the value array's data from memory.
 void freeValueArray(ValueArray* array);

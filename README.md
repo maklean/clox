@@ -25,7 +25,7 @@ so I think I'll only add the following:
     - [X] `arr.pop()`
     - [X] `arr.get(i)`
     - [X] `arr.set(i, val)`
-    - [ ] `arr.insert(i, val)`
+    - [X] `arr.insert(i, val)`
     - [ ] `arr.remove(i)`
     - [ ] `arr.contains(val)`
     - [ ] `arr.indexOf(val)`
