@@ -366,7 +366,7 @@ static bool array_join(int argCount, Value *args, Value *result) {
         // add seperator if we're between elements
         if(i != n-1) {
             memcpy(ptr, sep->chars, sep_n);
-            ptr += sep_n;
+            ptr += (uintptr_t)sep_n;
         }
     }
 
