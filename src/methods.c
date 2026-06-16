@@ -318,8 +318,6 @@ static bool array_reverse(int argCount, Value *args, Value *result) {
     return true;
 }
 
-#include <stdio.h>
-
 static bool array_join(int argCount, Value *args, Value *result) {
     CHECK_ARGUMENT_COUNT(argCount, 1, "arr.join(sep)");
 
