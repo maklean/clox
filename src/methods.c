@@ -9,11 +9,13 @@ extern VM vm;
 // Defines the given type method on the given hash table.
 static void defineTypeMethod(Table *table, const char *name, TypeMethod fnc);
 
-// Returns the length of the array.
+// Array Methods
 static bool array_len(int argCount, Value *args, Value *result);
+static bool array_pop(int argCount, Value *args, Value *result);
 
 void initMethods(Table *arrMethods, Table *strMethods) {
     defineTypeMethod(arrMethods, "len", array_len);
+    defineTypeMethod(arrMethods, "pop", array_pop);
 }
 
 static void defineTypeMethod(Table *table, const char *name, TypeMethod fnc) {
@@ -36,5 +38,24 @@ static bool array_len(int argCount, Value *args, Value *result) {
 
     *result = NUMBER_VAL((AS_ARRAY(args[0]))->data.count);
 
+    return true;
+}
+
+static bool array_pop(int argCount, Value *args, Value *result) {
+    if(argCount != 0) {
+        runtimeError("arr.pop() was passed more than 0 arguments.");
+        *result = NIL_VAL;
+        return false;
+    }
+
+    ObjArray *arr = AS_ARRAY(args[0]);
+
+    if(arr->data.count == 0) {
+        runtimeError("cannot arr.pop() on empty array.");
+        *result = NIL_VAL;
+        return false;
+    }
+
+    *result = arr->data.values[--arr->data.count];
     return true;
 }

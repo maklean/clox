@@ -22,7 +22,7 @@ so I think I'll only add the following:
 
     - [X] `arr.len()`
     - [ ] `arr.push(val)`
-    - [ ] `arr.pop()`
+    - [X] `arr.pop()`
     - [ ] `arr.get(i)`
     - [ ] `arr.set(i, val)`
     - [ ] `arr.insert(i, val)`

@@ -53,8 +53,8 @@ static bool invoke(ObjString *name, int argCount);
 // Invokes the given method on the given instance.
 static bool invokeInstance(ObjString *name, int argCount, ObjInstance *instance);
 
-// Invokes the given method on the given array.
-static bool invokeArray(ObjString *name, int argCount, Value receiver);
+// Invokes the given method on the array `argCount` away from the top of the stack.
+static bool invokeArray(ObjString *name, int argCount);
 
 // Calls the given method from the given class object. Returns whether the call was successful or not.
 static bool invokeFromClass(ObjClass *klass, ObjString *name, int argCount);
@@ -813,7 +813,7 @@ static bool invoke(ObjString *name, int argCount) {
     if(IS_INSTANCE(receiver)) {
         return invokeInstance(name, argCount, AS_INSTANCE(receiver));
     } else if(IS_ARRAY(receiver)) {
-        return invokeArray(name, argCount, receiver);
+        return invokeArray(name, argCount);
     }
 
     runtimeError("Cannot invoke method on the this value.");
@@ -833,7 +833,7 @@ static bool invokeInstance(ObjString *name, int argCount, ObjInstance *instance)
     return invokeFromClass(instance->klass, name, argCount);
 }
 
-static bool invokeArray(ObjString *name, int argCount, Value receiver) {
+static bool invokeArray(ObjString *name, int argCount) {
     Value fncVal;
 
     if(!tableGet(&vm.arrayMethods, name, &fncVal)) {
@@ -844,15 +844,11 @@ static bool invokeArray(ObjString *name, int argCount, Value receiver) {
     TypeMethod methodFn = AS_TYPE_METHOD(fncVal);
     Value result;
 
-    vm.stackTop -= argCount + 1;
-
-    if(!methodFn(argCount, &receiver, &result)) {
-        return false;
-    }
-
-    push(result);
+    bool ok = methodFn(argCount, vm.stackTop - argCount - 1, &result);
+    vm.stackTop -= argCount + 1; // remove arguments + array object
+    if(ok) push(result);
     
-    return true;
+    return ok;
 }
 
 static bool invokeFromClass(ObjClass *klass, ObjString *name, int argCount) {

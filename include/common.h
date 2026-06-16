@@ -12,7 +12,7 @@
 //#define DEBUG_PRINT_CODE
 
 // Prints the stack as the interpreter runs.
-//#define DEBUG_TRACE_EXECUTION
+#define DEBUG_TRACE_EXECUTION
 
 // Makes the GC runs as frequently as possible (stress test).
 #define DEBUG_STRESS_GC
