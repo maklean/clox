@@ -17,8 +17,49 @@ so I think I'll only add the following:
     - [X] Indexing into arrays
     - [X] Assigning at array indices
 - [ ] Type methods
-    - [ ] Array methods (`arr.push()`, `arr.len()`, `arr.pop()`, etc.)
-    - [ ] String methods (`str.push_str()`, `str.len()`, `str.replace()`, etc.)
+    <details>
+    <summary>Array methods (<code>arr.push()</code>, <code>arr.pop()</code>, <code>arr.len()</code>, etc.)</summary>
+
+    - [ ] `arr.push(val)`
+    - [ ] `arr.pop()`
+    - [ ] `arr.len()`
+    - [ ] `arr.get(i)`
+    - [ ] `arr.set(i, val)`
+    - [ ] `arr.insert(i, val)`
+    - [ ] `arr.remove(i)`
+    - [ ] `arr.contains(val)`
+    - [ ] `arr.indexOf(val)`
+    - [ ] `arr.slice(a, b)`
+    - [ ] `arr.concat(other)`
+    - [ ] `arr.reverse()`
+    - [ ] `arr.join(sep)`
+    - [ ] `arr.clear()`
+    - [ ] `arr.isEmpty()`
+    - [ ] `arr.copy()`
+
+    </details>
+    <details>
+    <summary>String methods (<code>str.push_str()</code>, <code>str.len()</code>, <code>str.replace()</code>, etc.)</summary>
+
+    - [ ] `str.len()`
+    - [ ] `str.push_str(s)`
+    - [ ] `str.replace(a, b)`
+    - [ ] `str.contains(sub)`
+    - [ ] `str.startsWith(pre)`
+    - [ ] `str.endsWith(suf)`
+    - [ ] `str.indexOf(sub)`
+    - [ ] `str.slice(a, b)`
+    - [ ] `str.toUpper()`
+    - [ ] `str.toLower()`
+    - [ ] `str.trim()`
+    - [ ] `str.trimStart()`
+    - [ ] `str.trimEnd()`
+    - [ ] `str.split(sep)`
+    - [ ] `str.isEmpty()`
+    - [ ] `str.repeat(n)`
+    - [ ] `str.charAt(i)`
+
+    </details>
 
 Other than that, I'm planning on adding some additional optimizations to the interpreter, here's what I'm thinking:
 
