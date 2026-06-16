@@ -34,6 +34,9 @@ typedef struct {
     Table strings; // for string interning
     Table globals; // for global variables
 
+    Table arrayMethods;
+    Table stringMethods;
+
     CallFrame frames[FRAMES_MAX];
     int frameCount;
 
@@ -64,5 +67,8 @@ void push(Value value);
 
 // Pops a value from the VM's stack.
 Value pop();
+
+// Prints a runtime error with the given formatted message.
+void runtimeError(const char *format, ...);
 
 #endif

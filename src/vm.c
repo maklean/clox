@@ -4,6 +4,7 @@
 #include "../include/compiler.h"
 #include "../include/value.h"
 #include "../include/memory.h"
+#include "../include/methods.h"
 
 #include <stdio.h>
 #include <stdarg.h>
@@ -21,9 +22,6 @@ static void resetStack();
 
 // Peeks `distance` away from the top of the stack.
 static Value peek(int distance);
-
-// Prints a runtime error with the given formatted message.
-static void runtimeError(const char *format, ...);
 
 // Returns whether the value is falsey or not (is nil or false)
 static bool isFalsey(Value value);
@@ -49,8 +47,14 @@ static void defineMethod(ObjString *name);
 // Pushes an ObjBoundMethod bound to the most recent object instance onto the stack.
 static bool bindMethod(ObjClass* klass, ObjString* name);
 
-// Calls the given method on the instance `argCount` away from the top of the stack.
+// Calls the specific invoke method on the value `argCount` away from the top of the stack.
 static bool invoke(ObjString *name, int argCount);
+
+// Invokes the given method on the given instance.
+static bool invokeInstance(ObjString *name, int argCount, ObjInstance *instance);
+
+// Invokes the given method on the given array.
+static bool invokeArray(ObjString *name, int argCount, Value receiver);
 
 // Calls the given method from the given class object. Returns whether the call was successful or not.
 static bool invokeFromClass(ObjClass *klass, ObjString *name, int argCount);
@@ -79,15 +83,20 @@ void initVM() {
 
     initTable(&vm.strings);
     initTable(&vm.globals);
+    initTable(&vm.arrayMethods);
+    initTable(&vm.stringMethods);
 
     vm.initString = copyString("init", 4);
 
     defineNative("clock", clockNative);
+    initMethods(&vm.arrayMethods, &vm.stringMethods);
 }
 
 void freeVM() {
     freeTable(&vm.strings);
     freeTable(&vm.globals);
+    freeTable(&vm.arrayMethods);
+    freeTable(&vm.stringMethods);
     vm.initString = NULL;
     freeObjects();
 }
@@ -607,7 +616,7 @@ static Value peek(int distance) {
     return vm.stackTop[-distance - 1]; // -1 b/c stackTop is positioned where the next value goes.
 }
 
-static void runtimeError(const char *format, ...) {
+void runtimeError(const char *format, ...) {
     // print the formatted string
     va_list args;
     va_start(args, format);
@@ -799,16 +808,19 @@ static bool bindMethod(ObjClass* klass, ObjString* name) {
 }
 
 static bool invoke(ObjString *name, int argCount) {
-    // get instance
     Value receiver = peek(argCount);
 
-    if(!IS_INSTANCE(receiver)) {
-        runtimeError("Only instances have methods.");
-        return false;
+    if(IS_INSTANCE(receiver)) {
+        return invokeInstance(name, argCount, AS_INSTANCE(receiver));
+    } else if(IS_ARRAY(receiver)) {
+        return invokeArray(name, argCount, receiver);
     }
 
-    ObjInstance *instance = AS_INSTANCE(receiver);
+    runtimeError("Cannot invoke method on the this value.");
+    return false;
+}
 
+static bool invokeInstance(ObjString *name, int argCount, ObjInstance *instance) {
     // look for field with same name before looking for function
     Value value;
 
@@ -819,6 +831,28 @@ static bool invoke(ObjString *name, int argCount) {
 
     // call method on instance
     return invokeFromClass(instance->klass, name, argCount);
+}
+
+static bool invokeArray(ObjString *name, int argCount, Value receiver) {
+    Value fncVal;
+
+    if(!tableGet(&vm.arrayMethods, name, &fncVal)) {
+        runtimeError("Undefined method '%s' on array.", name->chars);
+        return false;
+    }
+
+    TypeMethod methodFn = AS_TYPE_METHOD(fncVal);
+    Value result;
+
+    vm.stackTop -= argCount + 1;
+
+    if(!methodFn(argCount, &receiver, &result)) {
+        return false;
+    }
+
+    push(result);
+    
+    return true;
 }
 
 static bool invokeFromClass(ObjClass *klass, ObjString *name, int argCount) {

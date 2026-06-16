@@ -174,6 +174,9 @@ static void freeObject(Obj *object) {
             freeValueArray(&arr->data);
             FREE(sizeof(ObjArray), object);
             break;
+        case OBJ_TYPE_METHOD:
+            FREE(sizeof(ObjTypeMethod), object);
+            break;
     }
 }
 
@@ -183,8 +186,10 @@ static void markRoots() {
         markValue(*slot);
     }
 
-    // mark globals
+    // mark globals and type methods
     markTable(&vm.globals);
+    markTable(&vm.arrayMethods);
+    markTable(&vm.stringMethods);
 
     // mark heap-allocated memory used by the compiler
     markCompilerRoots();
@@ -294,6 +299,7 @@ static void blackenObject(Obj *object) {
 
         case OBJ_NATIVE:
         case OBJ_STRING:
+        case OBJ_TYPE_METHOD:
             break;
         
         case OBJ_ARRAY: {

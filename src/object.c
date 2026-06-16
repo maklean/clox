@@ -107,6 +107,14 @@ ObjArray *newArray() {
     return arr;
 }
 
+ObjTypeMethod *newTypeMethod(TypeMethod function) {
+    ObjTypeMethod *method = (ObjTypeMethod *)ALLOCATE_OBJ(sizeof(ObjTypeMethod), OBJ_TYPE_METHOD);
+
+    method->function = function;
+
+    return method;
+}
+
 ObjString *takeString(char *chars, int length) {
     uint32_t hash = hashString(chars, length);
 
@@ -163,6 +171,9 @@ void printObject(Value value) {
             break;
         case OBJ_ARRAY:
             printArray(AS_ARRAY(value));
+            break;
+        case OBJ_TYPE_METHOD:
+            printf("<type method fn>");
             break;
     }
 }

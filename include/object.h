@@ -33,6 +33,9 @@
 // Returns whether the type of the value is an array.
 #define IS_ARRAY(value) isObjType(value, OBJ_ARRAY)
 
+// Returns whether the type of the value is a type method.
+#define IS_TYPE_METHOD(value) isObjType(value, OBJ_TYPE_METHOD)
+
 // Returns the value as an `ObjString *`
 #define AS_STRING(value) ((ObjString *)AS_OBJ(value))
 
@@ -60,6 +63,9 @@
 // Returns the value as an `ObjArray *`
 #define AS_ARRAY(value) ((ObjArray *)AS_OBJ(value))
 
+// Returns the function pointed to by an `ObjTypeMethod *`.
+#define AS_TYPE_METHOD(value) (((ObjTypeMethod *)AS_OBJ(value))->function)
+
 typedef enum {
     OBJ_FUNCTION,
     OBJ_STRING,
@@ -70,6 +76,7 @@ typedef enum {
     OBJ_INSTANCE,
     OBJ_BOUND_METHOD,
     OBJ_ARRAY,
+    OBJ_TYPE_METHOD,
 } ObjType;
 
 struct Obj {
@@ -131,11 +138,17 @@ typedef struct {
 } ObjArray;
 
 typedef Value (*NativeFn)(int argCount, Value *args);
+typedef bool (*TypeMethod)(int argCount, Value *args, Value *result);
 
 typedef struct {
     Obj obj;
     NativeFn function;
 } ObjNative;
+
+typedef struct {
+    Obj obj;
+    TypeMethod function;
+} ObjTypeMethod;
 
 // Heap-allocates a new `ObjFunction` struct.
 ObjFunction *newFunction();
@@ -161,11 +174,14 @@ ObjBoundMethod *newBoundMethod(Value receiver, ObjClosure *method);
 // Heap-allocates a new `ObjArray` struct.
 ObjArray *newArray();
 
+// Heap-allocates a new `ObjTypeMethod` struct.
+ObjTypeMethod *newTypeMethod(TypeMethod function);
+
 // Allocates a heap-allocated `ObjString` made from 'chars' and 'length'.
 ObjString *takeString(char *chars, int length);
 
 // Copies 'length' characters starting at 'chars' and returns a heap-allocated `ObjString`.
-ObjString* copyString(const char* chars, int length);
+ObjString *copyString(const char *chars, int length);
 
 // Prints the object value.
 void printObject(Value value);
