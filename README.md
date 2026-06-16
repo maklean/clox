@@ -20,9 +20,9 @@ so I think I'll only add the following:
     <details>
     <summary>Array methods (<code>arr.push()</code>, <code>arr.pop()</code>, <code>arr.len()</code>, etc.)</summary>
 
+    - [X] `arr.len()`
     - [ ] `arr.push(val)`
     - [ ] `arr.pop()`
-    - [ ] `arr.len()`
     - [ ] `arr.get(i)`
     - [ ] `arr.set(i, val)`
     - [ ] `arr.insert(i, val)`
