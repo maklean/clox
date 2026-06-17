@@ -60,6 +60,7 @@ static bool array_copy(int argCount, Value *args, Value *result);
 // String Methods
 static bool string_len(int argCount, Value *args, Value *result);
 static bool string_replace(int argCount, Value *args, Value *result);
+static bool string_split(int argCount, Value *args, Value *result);
 
 void initMethods(Table *arrMethods, Table *strMethods) {
     defineTypeMethod(arrMethods, "len", array_len);
@@ -81,6 +82,7 @@ void initMethods(Table *arrMethods, Table *strMethods) {
 
     defineTypeMethod(strMethods, "len", string_len);
     defineTypeMethod(strMethods, "replace", string_replace);
+    defineTypeMethod(strMethods, "split", string_split);
 }
 
 static void defineTypeMethod(Table *table, const char *name, TypeMethod fnc) {
@@ -434,7 +436,7 @@ static bool string_replace(int argCount, Value *args, Value *result) {
     ObjString *str = AS_STRING(args[0]);
 
     if(!IS_STRING(args[1]) || !IS_STRING(args[2])) {
-        runtimeError("Arguments 'old' and 'new' have to be strings.");
+        runtimeError("Arguments 'old' and 'new' in str.replace(old, new) have to be strings.");
         return false;
     }
 
@@ -476,6 +478,77 @@ static bool string_replace(int argCount, Value *args, Value *result) {
 
     size_t result_s_len = ptr_res-result_s;
     *result = OBJ_VAL(copyString(result_s, result_s_len));
+
+    return true;
+}
+
+#include <stdio.h>
+
+static bool string_split(int argCount, Value *args, Value *result) {
+    CHECK_ARGUMENT_COUNT(argCount, 1, "str.split(sep)");
+
+    ObjString *str = AS_STRING(args[0]);
+
+    if(!IS_STRING(args[1])) {
+        runtimeError("Argument 'sep' in str.split(sep) has to be a string.");
+        return false;
+    }
+
+    ObjString *sep = AS_STRING(args[1]);
+    
+    if(sep->length == 0) {
+        runtimeError("Argument 'sep' in str.split(sep) cannot be empty.");
+        return false;
+    }
+
+    ObjArray *result_arr = newArray();
+    push(OBJ_VAL(result_arr)); // prevent GC bugs
+
+    // not gonna assume that str->chars is a mutable string.
+    char buf[str->length];
+    memcpy(buf, str->chars, str->length);
+
+    char *ptr_str = buf; // cursor into buf
+    char *ptr_str_last = buf;
+    char *ptr_str_end = buf + str->length;
+
+    // to avoid reinitialization
+    char tmp;
+    Value split_str;
+
+    while(ptr_str < ptr_str_end) {
+        if(
+            ptr_str_end-ptr_str >= sep->length &&
+            memcmp(ptr_str, sep->chars, sep->length) == 0
+        ) {
+            tmp = *ptr_str;
+            *ptr_str = '\0';
+
+            split_str = OBJ_VAL(copyString(ptr_str_last, ptr_str-ptr_str_last));
+            push(split_str); // prevent GC bugs
+
+            writeValueArray(&result_arr->data, split_str);
+
+            pop();
+
+            *ptr_str = tmp;
+            ptr_str += sep->length;
+            ptr_str_last = ptr_str;
+        } else {
+            ptr_str++;
+        }
+    }
+
+    // add last string into array
+    split_str = OBJ_VAL(copyString(ptr_str_last, ptr_str-ptr_str_last));
+
+    push(split_str); // prevent GC bugs
+    writeValueArray(&result_arr->data, split_str);
+    pop(); // pop split string
+
+    pop(); // pop result array from stack
+
+    *result = OBJ_VAL(result_arr);
 
     return true;
 }

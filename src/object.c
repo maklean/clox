@@ -236,8 +236,13 @@ static void printArray(ObjArray *array) {
 
     printf("[");
 
+    Value v;
     for(int i = 0; i < n; i++) {
+        v = array->data.values[i];
+
+        if(IS_STRING(v)) printf("\"");
         printValue(array->data.values[i]);
+        if(IS_STRING(v)) printf("\"");
 
         if(i != n-1) printf(", ");
     }

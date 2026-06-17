@@ -53,7 +53,7 @@ so I think I'll only add the following:
     - [ ] `str.trim()`
     - [ ] `str.trimStart()`
     - [ ] `str.trimEnd()`
-    - [ ] `str.split(sep)`
+    - [X] `str.split(sep)`
     - [ ] `str.isEmpty()`
     - [ ] `str.repeat(n)`
     - [ ] `str.charAt(i)`
