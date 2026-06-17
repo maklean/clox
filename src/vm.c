@@ -516,7 +516,7 @@ static InterpretResult run() {
 
                 int index = (int)val_index;
 
-                if(IS_ARRAY(peek(1))) {
+                if(IS_ARRAY(peek(0))) {
                     ObjArray *arr = (ObjArray *)AS_ARRAY(pop());
 
                     int n = arr->data.count;
