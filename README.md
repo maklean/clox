@@ -54,7 +54,7 @@ so I think I'll only add the following:
     - [ ] `str.trimStart()`
     - [ ] `str.trimEnd()`
     - [X] `str.split(sep)`
-    - [ ] `str.isEmpty()`
+    - [X] `str.isEmpty()`
     - [ ] `str.repeat(n)`
     - [ ] `str.charAt(i)`
 

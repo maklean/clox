@@ -559,7 +559,6 @@ static bool string_split(int argCount, Value *args, Value *result) {
     char *ptr_str_end = buf + str->length;
 
     // to avoid reinitialization
-    char tmp;
     Value split_str;
 
     while(ptr_str < ptr_str_end) {
@@ -567,17 +566,12 @@ static bool string_split(int argCount, Value *args, Value *result) {
             ptr_str_end-ptr_str >= sep->length &&
             memcmp(ptr_str, sep->chars, sep->length) == 0
         ) {
-            tmp = *ptr_str;
-            *ptr_str = '\0';
-
             split_str = OBJ_VAL(copyString(ptr_str_last, ptr_str-ptr_str_last));
             push(split_str); // prevent GC bugs
 
             writeValueArray(&result_arr->data, split_str);
 
             pop();
-
-            *ptr_str = tmp;
 
             // move ptr_str and ptr_str_last past the seperator
             ptr_str += sep->length;
