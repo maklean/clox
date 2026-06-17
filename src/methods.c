@@ -482,8 +482,6 @@ static bool string_replace(int argCount, Value *args, Value *result) {
     return true;
 }
 
-#include <stdio.h>
-
 static bool string_split(int argCount, Value *args, Value *result) {
     CHECK_ARGUMENT_COUNT(argCount, 1, "str.split(sep)");
 
