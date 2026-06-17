@@ -59,6 +59,7 @@ static bool array_copy(int argCount, Value *args, Value *result);
 
 // String Methods
 static bool string_len(int argCount, Value *args, Value *result);
+static bool string_replace(int argCount, Value *args, Value *result);
 
 void initMethods(Table *arrMethods, Table *strMethods) {
     defineTypeMethod(arrMethods, "len", array_len);
@@ -79,6 +80,7 @@ void initMethods(Table *arrMethods, Table *strMethods) {
     defineTypeMethod(arrMethods, "copy", array_copy);
 
     defineTypeMethod(strMethods, "len", string_len);
+    defineTypeMethod(strMethods, "replace", string_replace);
 }
 
 static void defineTypeMethod(Table *table, const char *name, TypeMethod fnc) {
@@ -421,7 +423,59 @@ static bool string_len(int argCount, Value *args, Value *result) {
     CHECK_ARGUMENT_COUNT(argCount, 0, "str.len()");
 
     ObjString *str = AS_STRING(args[0]);
-    
+
     *result = NUMBER_VAL(str->length);
+    return true;
+}
+
+static bool string_replace(int argCount, Value *args, Value *result) {
+    CHECK_ARGUMENT_COUNT(argCount, 2, "str.replace(old, new)");
+
+    ObjString *str = AS_STRING(args[0]);
+
+    if(!IS_STRING(args[1]) || !IS_STRING(args[2])) {
+        runtimeError("Arguments 'old' and 'new' have to be strings.");
+        return false;
+    }
+
+    ObjString *old = AS_STRING(args[1]);
+    ObjString *new = AS_STRING(args[2]);
+
+    if(old->length == 0) {
+        // result stays unchanged
+        *result = OBJ_VAL(str);
+        return true;
+    }
+
+    // this should assume/overcount the number of characters going into the result.
+    size_t result_upperbound = (str->length / old->length) * new->length + str->length;
+    char result_s[result_upperbound];
+
+    char *ptr_res = result_s; // cursor into result_s
+
+    char *ptr_str = str->chars; // cursor into str->chars
+    char *ptr_str_end = str->chars + str->length;
+
+    while(ptr_str < ptr_str_end) {
+        if(
+            ptr_str_end-ptr_str >= old->length &&
+            memcmp(ptr_str, old->chars, old->length) == 0
+        ) {
+            memcpy(ptr_res, new->chars, new->length);
+
+            ptr_str += old->length; // should move by k because if you had 'helllo' the third l shouldn't match with the second 'l' b/c it's been replaced
+            ptr_res += new->length; // move to spot for next character
+        } else {
+            // copy unmatched character
+            memcpy(ptr_res, ptr_str, 1);
+
+            ptr_str++;
+            ptr_res++;
+        }
+    }
+
+    size_t result_s_len = ptr_res-result_s;
+    *result = OBJ_VAL(copyString(result_s, result_s_len));
+
     return true;
 }

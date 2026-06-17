@@ -39,11 +39,10 @@ so I think I'll only add the following:
 
     </details>
     <details>
-    <summary>String methods (<code>str.push_str()</code>, <code>str.len()</code>, <code>str.replace()</code>, etc.)</summary>
+    <summary>String methods (<code>str.len()</code>, <code>str.replace()</code>, etc.)</summary>
 
-    - [ ] `str.len()`
-    - [ ] `str.push_str(s)`
-    - [ ] `str.replace(a, b)`
+    - [X] `str.len()`
+    - [X] `str.replace(old, new)`
     - [ ] `str.contains(sub)`
     - [ ] `str.startsWith(pre)`
     - [ ] `str.endsWith(suf)`
