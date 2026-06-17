@@ -57,6 +57,9 @@ static bool array_clear(int argCount, Value *args, Value *result);
 static bool array_isEmpty(int argCount, Value *args, Value *result);
 static bool array_copy(int argCount, Value *args, Value *result);
 
+// String Methods
+static bool string_len(int argCount, Value *args, Value *result);
+
 void initMethods(Table *arrMethods, Table *strMethods) {
     defineTypeMethod(arrMethods, "len", array_len);
     defineTypeMethod(arrMethods, "pop", array_pop);
@@ -74,6 +77,8 @@ void initMethods(Table *arrMethods, Table *strMethods) {
     defineTypeMethod(arrMethods, "clear", array_clear);
     defineTypeMethod(arrMethods, "isEmpty", array_isEmpty);
     defineTypeMethod(arrMethods, "copy", array_copy);
+
+    defineTypeMethod(strMethods, "len", string_len);
 }
 
 static void defineTypeMethod(Table *table, const char *name, TypeMethod fnc) {
@@ -409,5 +414,14 @@ static bool array_copy(int argCount, Value *args, Value *result) {
     pop();
 
     *result = OBJ_VAL(copy_arr);
+    return true;
+}
+
+static bool string_len(int argCount, Value *args, Value *result) {
+    CHECK_ARGUMENT_COUNT(argCount, 0, "str.len()");
+
+    ObjString *str = AS_STRING(args[0]);
+    
+    *result = NUMBER_VAL(str->length);
     return true;
 }

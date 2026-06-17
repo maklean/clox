@@ -53,8 +53,8 @@ static bool invoke(ObjString *name, int argCount);
 // Invokes the given method on the given instance.
 static bool invokeInstance(ObjString *name, int argCount, ObjInstance *instance);
 
-// Invokes the given method on the array `argCount` away from the top of the stack.
-static bool invokeArray(ObjString *name, int argCount);
+// Invokes the given method on the given type method object `argCount` away from the top of the stack.
+static bool invokeTypeMethod(ObjString *name, int argCount, const char *type, Table *typeTable);
 
 // Calls the given method from the given class object. Returns whether the call was successful or not.
 static bool invokeFromClass(ObjClass *klass, ObjString *name, int argCount);
@@ -812,11 +812,14 @@ static bool invoke(ObjString *name, int argCount) {
 
     if(IS_INSTANCE(receiver)) {
         return invokeInstance(name, argCount, AS_INSTANCE(receiver));
-    } else if(IS_ARRAY(receiver)) {
-        return invokeArray(name, argCount);
+    } else if(IS_ARRAY(receiver) || IS_STRING(receiver)) {
+        const char *type = IS_ARRAY(receiver) ? "array" : "string";
+        Table *typeTable = IS_ARRAY(receiver) ? &vm.arrayMethods : &vm.stringMethods;
+
+        return invokeTypeMethod(name, argCount, type, typeTable);
     }
 
-    runtimeError("Cannot invoke method on the this value.");
+    runtimeError("Cannot invoke method on this value.");
     return false;
 }
 
@@ -833,23 +836,23 @@ static bool invokeInstance(ObjString *name, int argCount, ObjInstance *instance)
     return invokeFromClass(instance->klass, name, argCount);
 }
 
-static bool invokeArray(ObjString *name, int argCount) {
+static bool invokeTypeMethod(ObjString *name, int argCount, const char *type, Table *typeTable) {
     Value fncVal;
 
-    if(!tableGet(&vm.arrayMethods, name, &fncVal)) {
-        runtimeError("Undefined method '%s' on array.", name->chars);
+    if(!tableGet(typeTable, name, &fncVal)) {
+        runtimeError("Undefined method '%s' on %s.", name->chars, type);
         return false;
     }
 
     TypeMethod methodFn = AS_TYPE_METHOD(fncVal);
     Value result = NIL_VAL;
 
-    Value *args = vm.stackTop - argCount - 1; // points where the array object is, followed by the arguments passed by the user
+    Value *args = vm.stackTop - argCount - 1; // points where the type method object is, followed by the arguments passed by the user
 
     bool ok = methodFn(argCount, args, &result);
-    vm.stackTop -= argCount + 1; // remove arguments + array object
+    vm.stackTop -= argCount + 1; // remove arguments + type method object
     if(ok) push(result);
-    
+
     return ok;
 }
 
