@@ -509,7 +509,7 @@ static bool string_split(int argCount, Value *args, Value *result) {
     memcpy(buf, str->chars, str->length);
 
     char *ptr_str = buf; // cursor into buf
-    char *ptr_str_last = buf;
+    char *ptr_str_last = buf; // pointer to the first character of the string we haven't split yet
     char *ptr_str_end = buf + str->length;
 
     // to avoid reinitialization
@@ -532,6 +532,8 @@ static bool string_split(int argCount, Value *args, Value *result) {
             pop();
 
             *ptr_str = tmp;
+
+            // move ptr_str and ptr_str_last past the seperator
             ptr_str += sep->length;
             ptr_str_last = ptr_str;
         } else {
