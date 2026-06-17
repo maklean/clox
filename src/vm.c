@@ -503,8 +503,8 @@ static InterpretResult run() {
                     return INTERPRET_RUNTIME_ERROR;
                 }
 
-                if(!IS_ARRAY(peek(1))) {
-                    runtimeError("Can only index into an array.");
+                if(!IS_ARRAY(peek(1)) && !IS_STRING(peek(1))) {
+                    runtimeError("Can only get index into an array or string.");
                     return INTERPRET_RUNTIME_ERROR;
                 }
 
@@ -515,17 +515,33 @@ static InterpretResult run() {
                 }
 
                 int index = (int)val_index;
-                ObjArray *arr = (ObjArray *)AS_ARRAY(pop());
 
-                int n = arr->data.count;
+                if(IS_ARRAY(peek(1))) {
+                    ObjArray *arr = (ObjArray *)AS_ARRAY(pop());
 
-                // check for out-of-bounds access
-                if(index < 0 || index >= n) {
-                    runtimeError("Attempted out-of-bounds access into array.");
-                    return INTERPRET_RUNTIME_ERROR;
+                    int n = arr->data.count;
+
+                    // check for out-of-bounds access
+                    if(index < 0 || index >= n) {
+                        runtimeError("Attempted out-of-bounds access into array.");
+                        return INTERPRET_RUNTIME_ERROR;
+                    }
+
+                    push(arr->data.values[index]);
+                } else {
+                    ObjString *str = (ObjString *)AS_STRING(pop());
+
+                    int n = str->length;
+
+                    // check for out-of-bounds access
+                    if(index < 0 || index >= n) {
+                        runtimeError("Attempted out-of-bounds access into array.");
+                        return INTERPRET_RUNTIME_ERROR;
+                    }
+
+                    push(OBJ_VAL(copyString(str->chars+index, 1)));
                 }
-
-                push(arr->data.values[index]);
+                
                 break;
             };
 
@@ -537,7 +553,7 @@ static InterpretResult run() {
                 }
 
                 if(!IS_ARRAY(peek(2))) {
-                    runtimeError("Can only index into an array.");
+                    runtimeError("Can only set index into an array.");
                     return INTERPRET_RUNTIME_ERROR;
                 }
 
