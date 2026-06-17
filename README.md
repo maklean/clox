@@ -43,7 +43,7 @@ so I think I'll only add the following:
 
     - [X] `str.len()`
     - [X] `str.replace(old, new)`
-    - [ ] `str.contains(sub)`
+    - [X] `str.contains(sub)`
     - [ ] `str.startsWith(pre)`
     - [ ] `str.endsWith(suf)`
     - [ ] `str.indexOf(sub)`

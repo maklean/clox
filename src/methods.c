@@ -60,6 +60,7 @@ static bool array_copy(int argCount, Value *args, Value *result);
 // String Methods
 static bool string_len(int argCount, Value *args, Value *result);
 static bool string_replace(int argCount, Value *args, Value *result);
+static bool string_contains(int argCount, Value *args, Value *result);
 static bool string_split(int argCount, Value *args, Value *result);
 
 void initMethods(Table *arrMethods, Table *strMethods) {
@@ -82,6 +83,7 @@ void initMethods(Table *arrMethods, Table *strMethods) {
 
     defineTypeMethod(strMethods, "len", string_len);
     defineTypeMethod(strMethods, "replace", string_replace);
+    defineTypeMethod(strMethods, "contains", string_contains);
     defineTypeMethod(strMethods, "split", string_split);
 }
 
@@ -479,6 +481,50 @@ static bool string_replace(int argCount, Value *args, Value *result) {
     size_t result_s_len = ptr_res-result_s;
     *result = OBJ_VAL(copyString(result_s, result_s_len));
 
+    return true;
+}
+
+static bool string_contains(int argCount, Value *args, Value *result) {
+    CHECK_ARGUMENT_COUNT(argCount, 1, "str.contains(sub)");
+
+    ObjString *str = AS_STRING(args[0]);
+
+    if(!IS_STRING(args[1])) {
+        runtimeError("Argument 'sub' in str.contains(sub) has to be a string.");
+        return false;
+    }
+
+    ObjString *sub = AS_STRING(args[1]);
+    
+    if(sub->length == 0) {
+        // empty string is in any string
+        *result = TRUE_VAL;
+        return true;
+    } else if(sub->length > str->length) {
+        *result = FALSE_VAL;
+        return true;
+    } else if(sub->length == str->length) {
+        *result = BOOL_VAL(valuesEqual(args[0], args[1]));
+        return true;
+    }
+
+    // can't use strstr since ObjStrings aren't null terminated (rather do this than allocate str->length+1 bytes in memory and check with a temp buffer)
+    char *ptr_str = str->chars;
+    char *ptr_str_end = str->chars+str->length;
+
+    while(ptr_str < ptr_str_end) {
+        if(
+            ptr_str_end-ptr_str >= sub->length &&
+            memcmp(ptr_str, sub->chars, sub->length) == 0
+        ) {
+            *result = TRUE_VAL;
+            return true;
+        }
+
+        ptr_str++;
+    }
+
+    *result = FALSE_VAL;
     return true;
 }
 
