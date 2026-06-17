@@ -62,6 +62,7 @@ static bool string_len(int argCount, Value *args, Value *result);
 static bool string_replace(int argCount, Value *args, Value *result);
 static bool string_contains(int argCount, Value *args, Value *result);
 static bool string_split(int argCount, Value *args, Value *result);
+static bool string_isEmpty(int argCount, Value *args, Value *result);
 
 void initMethods(Table *arrMethods, Table *strMethods) {
     defineTypeMethod(arrMethods, "len", array_len);
@@ -85,6 +86,7 @@ void initMethods(Table *arrMethods, Table *strMethods) {
     defineTypeMethod(strMethods, "replace", string_replace);
     defineTypeMethod(strMethods, "contains", string_contains);
     defineTypeMethod(strMethods, "split", string_split);
+    defineTypeMethod(strMethods, "isEmpty", string_isEmpty);
 }
 
 static void defineTypeMethod(Table *table, const char *name, TypeMethod fnc) {
@@ -595,6 +597,16 @@ static bool string_split(int argCount, Value *args, Value *result) {
     pop(); // pop result array from stack
 
     *result = OBJ_VAL(result_arr);
+
+    return true;
+}
+
+static bool string_isEmpty(int argCount, Value *args, Value *result) {
+    CHECK_ARGUMENT_COUNT(argCount, 0, "str.isEmpty()");
+
+    ObjString *str = AS_STRING(args[0]);
+
+    *result = BOOL_VAL(str->length == 0);
 
     return true;
 }
