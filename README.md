@@ -46,9 +46,9 @@ so I think I'll only add the following:
     - [X] `str.len()`
     - [X] `str.replace(old, new)`
     - [X] `str.contains(sub)`
-    - [ ] `str.startsWith(pre)`
-    - [ ] `str.endsWith(suf)`
-    - [ ] `str.indexOf(sub)`
+    - [X] `str.startsWith(pre)`
+    - [X] `str.endsWith(suf)`
+    - [X] `str.indexOf(sub)`
     - [ ] `str.slice(a, b)`
     - [ ] `str.toUpper()`
     - [ ] `str.toLower()`

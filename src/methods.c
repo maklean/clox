@@ -61,6 +61,10 @@ static bool array_copy(int argCount, Value *args, Value *result);
 static bool string_len(int argCount, Value *args, Value *result);
 static bool string_replace(int argCount, Value *args, Value *result);
 static bool string_contains(int argCount, Value *args, Value *result);
+static bool string_startsWith(int argCount, Value *args, Value *result);
+static bool string_endsWith(int argCount, Value *args, Value *result);
+static bool string_indexOf(int argCount, Value *args, Value *result);
+static bool string_slice(int argCount, Value *args, Value *result);
 static bool string_split(int argCount, Value *args, Value *result);
 static bool string_isEmpty(int argCount, Value *args, Value *result);
 
@@ -85,6 +89,10 @@ void initMethods(Table *arrMethods, Table *strMethods) {
     defineTypeMethod(strMethods, "len", string_len);
     defineTypeMethod(strMethods, "replace", string_replace);
     defineTypeMethod(strMethods, "contains", string_contains);
+    defineTypeMethod(strMethods, "startsWith", string_startsWith);
+    defineTypeMethod(strMethods, "endsWith", string_endsWith);
+    defineTypeMethod(strMethods, "indexOf", string_indexOf);
+    defineTypeMethod(strMethods, "slice", string_slice);
     defineTypeMethod(strMethods, "split", string_split);
     defineTypeMethod(strMethods, "isEmpty", string_isEmpty);
 }
@@ -527,6 +535,96 @@ static bool string_contains(int argCount, Value *args, Value *result) {
     }
 
     *result = FALSE_VAL;
+    return true;
+}
+
+static bool string_startsWith(int argCount, Value *args, Value *result) {
+    CHECK_ARGUMENT_COUNT(argCount, 1, "str.startsWith(pre)");
+
+    ObjString *str = AS_STRING(args[0]);
+
+    if(!IS_STRING(args[1])) {
+        runtimeError("Argument 'pre' in str.startsWith(pre) has to be a string.");
+        return false;
+    }
+
+    ObjString *pre = AS_STRING(args[1]);
+
+    if(pre->length == 0) {
+        // always true for an empty string
+        *result = TRUE_VAL;
+        return true;
+    } else if(pre->length > str->length) {
+        *result = FALSE_VAL;
+        return true;
+    }
+
+    *result = BOOL_VAL(memcmp(pre->chars, str->chars, pre->length) == 0);
+    return true;
+}
+
+static bool string_endsWith(int argCount, Value *args, Value *result) {
+    CHECK_ARGUMENT_COUNT(argCount, 1, "str.endsWith(sub)");
+
+    ObjString *str = AS_STRING(args[0]);
+
+    if(!IS_STRING(args[1])) {
+        runtimeError("Argument 'sub' in str.endsWith(sub) has to be a string.");
+        return false;
+    }
+
+    ObjString *sub = AS_STRING(args[1]);
+
+    if(sub->length == 0) {
+        // always true for an empty string
+        *result = TRUE_VAL;
+        return true;
+    } else if(sub->length > str->length) {
+        *result = FALSE_VAL;
+        return true;
+    }
+
+    *result = BOOL_VAL(memcmp(sub->chars, str->chars+str->length-sub->length, sub->length) == 0);
+    return true;
+}
+
+static bool string_indexOf(int argCount, Value *args, Value *result) {
+    CHECK_ARGUMENT_COUNT(argCount, 1, "str.indexOf(sub)");
+
+    ObjString *str = AS_STRING(args[0]);
+
+    if(!IS_STRING(args[1])) {
+        runtimeError("Argument 'sub' in str.indexOf(sub) has to be a string.");
+        return false;
+    }
+
+    ObjString *sub = AS_STRING(args[1]);
+
+    if(sub->length == 0) {
+        // always 0 for an empty string
+        *result = NUMBER_VAL(0);
+        return true;
+    } else if(sub->length > str->length) {
+        *result = NUMBER_VAL(-1);
+        return true;
+    }
+
+    char *ptr_str = str->chars;
+    char *ptr_str_end = str->chars + str->length;
+
+    while(ptr_str < ptr_str_end) {
+        if(
+            ptr_str_end - ptr_str >= sub->length &&
+            memcmp(ptr_str, sub->chars, sub->length) == 0
+        ) {
+            *result = NUMBER_VAL(ptr_str - str->chars);
+            return true;
+        }
+
+        ptr_str++;
+    }
+
+    *result = NUMBER_VAL(-1);
     return true;
 }
 
