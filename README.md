@@ -49,7 +49,7 @@ so I think I'll only add the following:
     - [X] `str.startsWith(pre)`
     - [X] `str.endsWith(suf)`
     - [X] `str.indexOf(sub)`
-    - [ ] `str.slice(a, b)`
+    - [X] `str.slice(a, b)`
     - [ ] `str.toUpper()`
     - [ ] `str.toLower()`
     - [ ] `str.trim()`

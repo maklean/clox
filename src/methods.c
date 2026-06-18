@@ -628,6 +628,48 @@ static bool string_indexOf(int argCount, Value *args, Value *result) {
     return true;
 }
 
+static bool string_slice(int argCount, Value *args, Value *result) {
+    if(argCount == 0) {
+        CHECK_ARGUMENT_COUNT(argCount, 1, "str.slice(a, b=n)");
+    } else if(argCount > 2) {
+        CHECK_ARGUMENT_COUNT(argCount, 2, "str.slice(a, b=n)");
+    }
+
+    ObjString *str = AS_STRING(args[0]);
+    
+    double val_index_a = AS_NUMBER(args[1]);
+    double val_index_b = argCount == 1 ? str->length : AS_NUMBER(args[2]);
+
+    CHECK_VALID_INDEX(val_index_a, "str.slice(a, b=n)");
+    CHECK_VALID_INDEX(val_index_b, "str.slice(a, b=n)");
+
+    // these should be clamped if they're out-of-bounds towards the right
+    int index_a = MIN((int)val_index_a, str->length);
+    int index_b = MIN((int)val_index_b, str->length);
+
+    // check for negative indexes
+    CHECK_OUT_OF_BOUNDS(index_a, str->length+1, "arr.slice(a, b=n)");
+    CHECK_OUT_OF_BOUNDS(index_b, str->length+1, "arr.slice(a, b=n)");
+    
+    if(index_b < index_a) {
+        runtimeError("index b cannot be smaller than index a in str.slice(a, b=n).");
+        return false;
+    }
+
+    size_t slicedString_len = index_b-index_a;
+    if(slicedString_len == 0) {
+        *result = OBJ_VAL(copyString("", 0));
+        return true;
+    }
+
+    // atp, everything should be in the correct state to start copying: index_a < index_b, index_a & index_b are in [0, n]
+    char slicedString[slicedString_len];
+    memcpy(slicedString, str->chars+index_a, slicedString_len);
+
+    *result = OBJ_VAL(copyString(slicedString, slicedString_len));
+    return true;
+}
+
 static bool string_split(int argCount, Value *args, Value *result) {
     CHECK_ARGUMENT_COUNT(argCount, 1, "str.split(sep)");
 
