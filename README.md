@@ -18,7 +18,7 @@ so I think I'll only add the following:
     - [X] Assigning at array indices
 - [X] String indexing
     - **NOTE:** Because strings are interned, I'm only adding indexing for get operations.
-- [ ] Type methods
+- [X] Type methods
     <details>
     <summary>Array methods (<code>arr.push()</code>, <code>arr.pop()</code>, <code>arr.len()</code>, etc.)</summary>
 
@@ -57,7 +57,7 @@ so I think I'll only add the following:
     - [X] `str.trimEnd()`
     - [X] `str.split(sep)`
     - [X] `str.isEmpty()`
-    - [ ] `str.repeat(n)`
+    - [X] `str.repeat(n)`
 
     </details>
 

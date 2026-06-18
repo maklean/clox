@@ -23,7 +23,7 @@ extern VM vm;
 #define CHECK_VALID_INDEX(val_index, method) \
     do { \
         if(floor(val_index) != val_index) { \
-            runtimeError("Index passed to %s has to be a whole number.", method); \
+            runtimeError("Integral value passed to %s has to be a whole number.", method); \
             return false; \
         } \
     } while(0)
@@ -73,6 +73,7 @@ static bool string_trimStart(int argCount, Value *args, Value *result);
 static bool string_trimEnd(int argCount, Value *args, Value *result);
 static bool string_split(int argCount, Value *args, Value *result);
 static bool string_isEmpty(int argCount, Value *args, Value *result);
+static bool string_repeat(int argCount, Value *args, Value *result);
 
 void initMethods(Table *arrMethods, Table *strMethods) {
     defineTypeMethod(arrMethods, "len", array_len);
@@ -106,6 +107,7 @@ void initMethods(Table *arrMethods, Table *strMethods) {
     defineTypeMethod(strMethods, "trimEnd", string_trimEnd);
     defineTypeMethod(strMethods, "split", string_split);
     defineTypeMethod(strMethods, "isEmpty", string_isEmpty);
+    defineTypeMethod(strMethods, "repeat", string_repeat);
 }
 
 static void defineTypeMethod(Table *table, const char *name, TypeMethod fnc) {
@@ -866,5 +868,37 @@ static bool string_isEmpty(int argCount, Value *args, Value *result) {
 
     *result = BOOL_VAL(str->length == 0);
 
+    return true;
+}
+
+static bool string_repeat(int argCount, Value *args, Value *result) {
+    CHECK_ARGUMENT_COUNT(argCount, 1, "str.repeat(n)");
+
+    ObjString *str = AS_STRING(args[0]);
+
+    if(!IS_NUMBER(args[1])) {
+        runtimeError("Argument 'n' in str.repeat(n) has to be a whole number.");
+        return false;
+    }
+
+    double n_val = AS_NUMBER(args[1]);
+    CHECK_VALID_INDEX(n_val, "str.repeat(n)");
+
+    int n = (int)n_val;
+    if(n <= 0) {
+        runtimeError("Argument 'n' in str.repeat(n) has to be a non-zero positive value.");
+        return false;
+    }
+
+    size_t repeatedStr_len = str->length * n;
+    char repeatedStr[repeatedStr_len];
+    char *repeatedStr_ptr = repeatedStr;
+
+    while(n--) {
+        memcpy(repeatedStr_ptr, str->chars, str->length);
+        repeatedStr_ptr += str->length;
+    }
+
+    *result = OBJ_VAL(copyString(repeatedStr, repeatedStr_len));
     return true;
 }
