@@ -4,6 +4,7 @@
 
 #include <string.h>
 #include <math.h>
+#include <ctype.h>
 
 extern VM vm;
 
@@ -65,6 +66,8 @@ static bool string_startsWith(int argCount, Value *args, Value *result);
 static bool string_endsWith(int argCount, Value *args, Value *result);
 static bool string_indexOf(int argCount, Value *args, Value *result);
 static bool string_slice(int argCount, Value *args, Value *result);
+static bool string_toUpper(int argCount, Value *args, Value *result);
+static bool string_toLower(int argCount, Value *args, Value *result);
 static bool string_split(int argCount, Value *args, Value *result);
 static bool string_isEmpty(int argCount, Value *args, Value *result);
 
@@ -93,6 +96,8 @@ void initMethods(Table *arrMethods, Table *strMethods) {
     defineTypeMethod(strMethods, "endsWith", string_endsWith);
     defineTypeMethod(strMethods, "indexOf", string_indexOf);
     defineTypeMethod(strMethods, "slice", string_slice);
+    defineTypeMethod(strMethods, "toUpper", string_toUpper);
+    defineTypeMethod(strMethods, "toLower", string_toLower);
     defineTypeMethod(strMethods, "split", string_split);
     defineTypeMethod(strMethods, "isEmpty", string_isEmpty);
 }
@@ -667,6 +672,40 @@ static bool string_slice(int argCount, Value *args, Value *result) {
     memcpy(slicedString, str->chars+index_a, slicedString_len);
 
     *result = OBJ_VAL(copyString(slicedString, slicedString_len));
+    return true;
+}
+
+static bool string_toUpper(int argCount, Value *args, Value *result) {
+    CHECK_ARGUMENT_COUNT(argCount, 0, "str.toUpper()");
+
+    ObjString *str = AS_STRING(args[0]);
+
+    if(str->length == 0) {
+        *result = OBJ_VAL(copyString("", 0));
+        return true;
+    }
+
+    char upperString[str->length];
+    for(int i = 0; i < str->length; i++) upperString[i] = toupper(str->chars[i]);
+
+    *result = OBJ_VAL(copyString(upperString, str->length));
+    return true;
+}
+
+static bool string_toLower(int argCount, Value *args, Value *result) {
+    CHECK_ARGUMENT_COUNT(argCount, 0, "str.toLower()");
+
+    ObjString *str = AS_STRING(args[0]);
+
+    if(str->length == 0) {
+        *result = OBJ_VAL(copyString("", 0));
+        return true;
+    }
+
+    char lowerString[str->length];
+    for(int i = 0; i < str->length; i++) lowerString[i] = tolower(str->chars[i]);
+
+    *result = OBJ_VAL(copyString(lowerString, str->length));
     return true;
 }
 
