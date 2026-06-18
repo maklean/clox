@@ -50,11 +50,11 @@ so I think I'll only add the following:
     - [X] `str.endsWith(suf)`
     - [X] `str.indexOf(sub)`
     - [X] `str.slice(a, b)`
-    - [ ] `str.toUpper()`
-    - [ ] `str.toLower()`
-    - [ ] `str.trim()`
-    - [ ] `str.trimStart()`
-    - [ ] `str.trimEnd()`
+    - [X] `str.toUpper()`
+    - [X] `str.toLower()`
+    - [X] `str.trim()`
+    - [X] `str.trimStart()`
+    - [X] `str.trimEnd()`
     - [X] `str.split(sep)`
     - [X] `str.isEmpty()`
     - [ ] `str.repeat(n)`

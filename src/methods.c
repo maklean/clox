@@ -68,6 +68,9 @@ static bool string_indexOf(int argCount, Value *args, Value *result);
 static bool string_slice(int argCount, Value *args, Value *result);
 static bool string_toUpper(int argCount, Value *args, Value *result);
 static bool string_toLower(int argCount, Value *args, Value *result);
+static bool string_trim(int argCount, Value *args, Value *result);
+static bool string_trimStart(int argCount, Value *args, Value *result);
+static bool string_trimEnd(int argCount, Value *args, Value *result);
 static bool string_split(int argCount, Value *args, Value *result);
 static bool string_isEmpty(int argCount, Value *args, Value *result);
 
@@ -98,6 +101,9 @@ void initMethods(Table *arrMethods, Table *strMethods) {
     defineTypeMethod(strMethods, "slice", string_slice);
     defineTypeMethod(strMethods, "toUpper", string_toUpper);
     defineTypeMethod(strMethods, "toLower", string_toLower);
+    defineTypeMethod(strMethods, "trim", string_trim);
+    defineTypeMethod(strMethods, "trimStart", string_trimStart);
+    defineTypeMethod(strMethods, "trimEnd", string_trimEnd);
     defineTypeMethod(strMethods, "split", string_split);
     defineTypeMethod(strMethods, "isEmpty", string_isEmpty);
 }
@@ -706,6 +712,85 @@ static bool string_toLower(int argCount, Value *args, Value *result) {
     for(int i = 0; i < str->length; i++) lowerString[i] = tolower(str->chars[i]);
 
     *result = OBJ_VAL(copyString(lowerString, str->length));
+    return true;
+}
+
+static void _trimStr(const char *str, int *str_len_ptr, int *startOffset, bool left, bool right) {
+    const char *start_ptr = str; // pointer to the first non-whitespace char.
+    const char *end_ptr = str + *str_len_ptr - 1; // pointer to the last non-whitespace char
+
+    if(left) {
+        while(start_ptr <= end_ptr && *start_ptr == ' ') start_ptr++;
+    }
+
+    if(right) {
+        while(start_ptr <= end_ptr && *end_ptr == ' ') end_ptr--;
+    }
+
+    // if the pointers are past each other, the string is empty
+    if(start_ptr > end_ptr) {
+        *str_len_ptr = 0;
+        return;
+    }
+
+    *str_len_ptr = end_ptr - start_ptr + 1;
+    *startOffset = start_ptr-str;
+}
+
+static bool string_trim(int argCount, Value *args, Value *result) {
+    CHECK_ARGUMENT_COUNT(argCount, 0, "str.trim()");
+
+    ObjString *s = AS_STRING(args[0]);
+
+    int len = s->length;
+    int startOffset = 0;
+    _trimStr(s->chars, &len, &startOffset, true, true);
+
+    if(len == 0) {
+        *result = OBJ_VAL(copyString("", 0));
+        return true;
+    }
+
+    *result = OBJ_VAL(copyString(s->chars+startOffset, len));
+
+    return true;
+}
+
+static bool string_trimStart(int argCount, Value *args, Value *result){
+    CHECK_ARGUMENT_COUNT(argCount, 0, "str.trimStart()");
+
+    ObjString *s = AS_STRING(args[0]);
+
+    int len = s->length;
+    int startOffset = 0;
+    _trimStr(s->chars, &len, &startOffset, true, false);
+
+    if(len == 0) {
+        *result = OBJ_VAL(copyString("", 0));
+        return true;
+    }
+
+    *result = OBJ_VAL(copyString(s->chars+startOffset, len));
+
+    return true;
+}
+
+static bool string_trimEnd(int argCount, Value *args, Value *result){
+    CHECK_ARGUMENT_COUNT(argCount, 0, "str.trimEnd()");
+
+    ObjString *s = AS_STRING(args[0]);
+
+    int len = s->length;
+    int startOffset = 0;
+    _trimStr(s->chars, &len, &startOffset, false, true);
+
+    if(len == 0) {
+        *result = OBJ_VAL(copyString("", 0));
+        return true;
+    }
+
+    *result = OBJ_VAL(copyString(s->chars+startOffset, len));
+
     return true;
 }
 
