@@ -159,6 +159,12 @@ static bool array_get(int argCount, Value *args, Value *result) {
     CHECK_ARGUMENT_COUNT(argCount, 1, "arr.get(i)");
 
     ObjArray *arr = AS_ARRAY(args[0]);
+
+    if(!IS_NUMBER(args[1])) {
+        runtimeError("Argument 'i' in arr.get(i) must be a number.");
+        return false;
+    }
+
     double val_index = AS_NUMBER(args[1]);
 
     CHECK_VALID_INDEX(val_index, "arr.get(i)");
@@ -176,6 +182,12 @@ static bool array_set(int argCount, Value *args, Value *result) {
     CHECK_ARGUMENT_COUNT(argCount, 2, "arr.set(i, val)");
 
     ObjArray *arr = AS_ARRAY(args[0]);
+
+    if(!IS_NUMBER(args[1])) {
+        runtimeError("Argument 'i' in arr.set(i, val) must be a number.");
+        return false;
+    }
+
     double val_index = AS_NUMBER(args[1]);
 
     CHECK_VALID_INDEX(val_index, "arr.set(i, val)");
@@ -193,6 +205,12 @@ static bool array_insert(int argCount, Value *args, Value *result) {
     CHECK_ARGUMENT_COUNT(argCount, 2, "arr.insert(i, val)");
 
     ObjArray *arr = AS_ARRAY(args[0]);
+
+    if(!IS_NUMBER(args[1])) {
+        runtimeError("Argument 'i' in arr.insert(i, val) must be a number.");
+        return false;
+    }
+
     double val_index = AS_NUMBER(args[1]);
 
     CHECK_VALID_INDEX(val_index, "arr.insert(i, val)");
@@ -216,6 +234,12 @@ static bool array_remove(int argCount, Value *args, Value *result) {
     CHECK_ARGUMENT_COUNT(argCount, 1, "arr.remove(i)");
 
     ObjArray *arr = AS_ARRAY(args[0]);
+
+    if(!IS_NUMBER(args[1])) {
+        runtimeError("Argument 'i' in arr.remove(i) must be a number.");
+        return false;
+    }
+
     double val_index = AS_NUMBER(args[1]);
 
     CHECK_VALID_INDEX(val_index, "arr.remove(i)");
@@ -271,6 +295,12 @@ static bool array_slice(int argCount, Value *args, Value *result) {
     }
 
     ObjArray *arr = AS_ARRAY(args[0]);
+
+    if(!IS_NUMBER(args[1]) || !IS_NUMBER(args[2])) {
+        runtimeError("Arguments 'a' and 'b' in arr.slice(a, b=n) must be both numbers.");
+        return false;
+    }
+
     int n = arr->data.count;
 
     double val_index_a = AS_NUMBER(args[1]);
@@ -649,6 +679,11 @@ static bool string_slice(int argCount, Value *args, Value *result) {
     }
 
     ObjString *str = AS_STRING(args[0]);
+
+    if(!IS_NUMBER(args[1]) || !IS_NUMBER(args[2])) {
+        runtimeError("Arguments 'a' and 'b' in str.slice(a, b=n) must be both numbers.");
+        return false;
+    }
     
     double val_index_a = AS_NUMBER(args[1]);
     double val_index_b = argCount == 1 ? str->length : AS_NUMBER(args[2]);
