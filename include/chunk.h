@@ -66,6 +66,15 @@ typedef enum {
     OP_RETURN
 } OpCode;
 
+#ifdef INLINE_CACHING
+typedef struct ObjClass ObjClass;
+
+typedef struct {
+    ObjClass *klass;
+    int index;
+} InlineCache;
+#endif
+
 // Dynamic array of bytecode instructions
 typedef struct {
     int count;
@@ -73,6 +82,12 @@ typedef struct {
     uint8_t *code; // array of bytes
     int *lines; // array of line numbers corresponding to 'code'
     ValueArray constants; // constant pool
+
+    #ifdef INLINE_CACHING
+    InlineCache *cache;
+    int cacheCount;
+    int cacheCapacity;
+    #endif
 } Chunk;
 
 // Initializes a Chunk data structure (initializes to a completely empty array).
@@ -86,5 +101,9 @@ bool writeConstant(Chunk* chunk, Value value, int line);
 
 // Frees the Chunks dynamic memory from the heap.
 void freeChunk(Chunk* chunk);
+
+#ifdef INLINE_CACHING
+int addCache(Chunk *chunk);
+#endif
 
 #endif

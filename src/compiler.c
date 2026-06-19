@@ -914,6 +914,19 @@ static void dot(bool canAssign) {
     if(canAssign && match(TOKEN_EQUAL)) {
         expression();
         name <= 255 ? emitBytes(OP_SET_PROPERTY, (uint8_t)name) : emitLongBytes(OP_SET_PROPERTY_LONG, name);
+
+        #ifdef INLINE_CACHING
+        int cache_index = addCache(currentChunk());
+
+        //printf("compiled ci (set) = %d\n", cache_index);
+
+        if(cache_index == -1) {
+            error("Too many property accesses in one function (max 65535).");
+            cache_index = 0;
+        }
+
+        emitBytes((uint8_t)((cache_index >> 8) & 0xFF), (uint8_t)(cache_index & 0xFF));
+        #endif
     } else if(match(TOKEN_LEFT_PAREN)) {
         // we're most likely making a method call if we're accessing some function after a dot property
         uint8_t argCount = argumentList();
@@ -922,6 +935,19 @@ static void dot(bool canAssign) {
         emitByte(argCount);
     } else {
         name <= 255 ? emitBytes(OP_GET_PROPERTY, (uint8_t)name) : emitLongBytes(OP_GET_PROPERTY_LONG, name);
+
+        #ifdef INLINE_CACHING
+        int cache_index = addCache(currentChunk());
+
+        //printf("compiled ci (get) = %d\n", cache_index);
+
+        if(cache_index == -1) {
+            error("Too many property accesses in one function (max 65535).");
+            cache_index = 0;
+        }
+        
+        emitBytes((uint8_t)((cache_index >> 8) & 0xFF), (uint8_t)(cache_index & 0xFF));
+        #endif
     }
 }
 

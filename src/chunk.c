@@ -10,6 +10,12 @@ void initChunk(Chunk *chunk) {
     chunk->capacity = 0;
     chunk->code = NULL;
     chunk->lines = NULL;
+    
+    #ifdef INLINE_CACHING
+    chunk->cache = NULL;
+    chunk->cacheCount = 0;
+    chunk->cacheCapacity = 0;
+    #endif
 
     initValueArray(&chunk->constants);
 }
@@ -17,6 +23,10 @@ void initChunk(Chunk *chunk) {
 void freeChunk(Chunk* chunk) {
     FREE_ARRAY(sizeof(uint8_t), chunk->code, chunk->capacity);
     FREE_ARRAY(sizeof(int), chunk->lines, chunk->capacity);
+    
+    #ifdef INLINE_CACHING
+    FREE_ARRAY(sizeof(InlineCache), chunk->cache, chunk->cacheCapacity);
+    #endif
 
     // reset
     freeValueArray(&chunk->constants);
@@ -67,3 +77,23 @@ bool writeConstant(Chunk* chunk, Value value, int line) {
 
     return true;
 }
+
+#ifdef INLINE_CACHING
+int addCache(Chunk *chunk) {
+    if(chunk->cacheCount >= UINT16_MAX) {
+        return -1;
+    }
+
+    if(chunk->cacheCount >= chunk->cacheCapacity) {
+        int oldCapacity = chunk->cacheCapacity;
+        chunk->cacheCapacity = GROW_CAPACITY(oldCapacity);
+
+        chunk->cache = (InlineCache *)GROW_ARRAY(sizeof(InlineCache), chunk->cache, oldCapacity, chunk->cacheCapacity);
+    }
+
+    // placeholder InlineCache for now (it'll get set at runtime if the property needs to be cached)
+    chunk->cache[chunk->cacheCount] = (InlineCache){.klass = NULL, .index = -1 };
+
+    return chunk->cacheCount++;
+}
+#endif

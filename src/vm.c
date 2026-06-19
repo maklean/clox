@@ -379,13 +379,36 @@ static InterpretResult run() {
 
                 Value value;
                 #ifdef INLINE_CACHING
-                    if(tableGet(&instance->klass->fieldNames, name, &value)) {
-                        // remove instance and add field value to stack
-                        pop();
-                        int index = (int)AS_NUMBER(value);
-                        push(instance->fields.values[index]);
-                        break;
+                    int ic_index = (READ_BYTE() << 8) | READ_BYTE();
+                    InlineCache ic = frame->closure->function->chunk.cache[ic_index];
+
+                    if(ic.klass == NULL || ic.klass != instance->klass) {
+                        if(tableGet(&instance->klass->fieldNames, name, &value)) {
+                            //printf("Slow path (get).\n");
+                            // remove instance and add field value to stack
+                            pop();
+                            int index = (int)AS_NUMBER(value);
+                            Value fieldValue = instance->fields.values[index];
+
+                            frame->closure->function->chunk.cache[ic_index].klass = instance->klass;
+                            frame->closure->function->chunk.cache[ic_index].index = index;
+
+                            push(fieldValue);
+                            break;
+                        }
+
+                        if(!bindMethod(instance->klass, name)) {
+                            return INTERPRET_RUNTIME_ERROR;
+                        }
                     }
+
+                    //printf("fast path (get).\n");
+
+                    pop(); // pop instance off
+
+                    Value fieldValue = instance->fields.values[ic.index];
+
+                    push(fieldValue);
                 #else
                     if(tableGet(&instance->fields, name, &value)) {
                         // remove instance and add field value to stack
@@ -393,11 +416,12 @@ static InterpretResult run() {
                         push(value);
                         break;
                     }
-                #endif
 
-                if(!bindMethod(instance->klass, name)) {
-                    return INTERPRET_RUNTIME_ERROR;
-                }
+                    if(!bindMethod(instance->klass, name)) {
+                        return INTERPRET_RUNTIME_ERROR;
+                    }
+                #endif
+                
                 break;
             }
 
@@ -415,22 +439,43 @@ static InterpretResult run() {
                     ObjString *name = instruction == OP_SET_PROPERTY ? (READ_STRING()) : (READ_STRING_LONG());
                     Value index_val;
                     int index;
-                    
-                    if(tableGet(&instance->klass->fieldNames, name, &index_val)) {
-                        // we're assigning to a property we've already stored in the fields array
-                        index = (int)AS_NUMBER(index_val);
+
+                    int ic_index = (READ_BYTE() << 8) | (READ_BYTE());
+                    InlineCache ic = frame->closure->function->chunk.cache[ic_index];
+
+                    if(ic.klass == NULL || ic.klass != instance->klass) {
+                        //printf("slow path (set).\n");
+
+                        if(tableGet(&instance->klass->fieldNames, name, &index_val)) {
+                            // we're assigning to a property we've already stored in the fields array
+                            index = (int)AS_NUMBER(index_val);
+
+                            if(instance->fields.count <= index) {
+                                writeValueArray(&instance->fields, peek(0));
+                            } else {
+                                instance->fields.values[index] = peek(0);
+                            }
+
+                        } else {
+                            // we're assigning to a property that isn't on the instance yet (this breaks IC, but since this is a learning project, it is what it is...)
+                            index = instance->fields.count;
+                            
+                            writeValueArray(&instance->fields, peek(0));
+                            tableSet(&instance->klass->fieldNames, name, NUMBER_VAL(index));
+                        }
+
+                        frame->closure->function->chunk.cache[ic_index].klass = instance->klass;
+                        frame->closure->function->chunk.cache[ic_index].index = index;
+                    } else {
+                        //printf("fast path (set).\n");
+
+                        index = ic.index;
 
                         if(instance->fields.count <= index) {
                             writeValueArray(&instance->fields, peek(0));
                         } else {
                             instance->fields.values[index] = peek(0);
                         }
-                    } else {
-                        // we're assigning to a property that isn't on the instance yet (this breaks IC, but since this is a learning project, it is what it is...)
-                        index = instance->fields.count;
-                        
-                        writeValueArray(&instance->fields, peek(0));
-                        tableSet(&instance->klass->fieldNames, name, NUMBER_VAL(index));
                     }
                 #else
                     tableSet(&instance->fields, (instruction == OP_SET_PROPERTY ? (READ_STRING()) : (READ_STRING_LONG())), peek(0));

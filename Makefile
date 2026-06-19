@@ -1,4 +1,4 @@
-DEBUG=true
+DEBUG=false
 
 CC=gcc
 LIBS=-lm
