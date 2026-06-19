@@ -85,7 +85,8 @@ ObjInstance *newInstance(ObjClass *klass) {
     ObjInstance *instance = (ObjInstance *)ALLOCATE_OBJ(sizeof(ObjInstance), OBJ_INSTANCE);
 
     instance->klass = klass;
-    initTable(&instance->fields);
+    initTable(&instance->fieldNames);
+    initValueArray(&instance->fields);
 
     return instance;
 }

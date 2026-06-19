@@ -378,10 +378,11 @@ static InterpretResult run() {
                 ObjString *name = instruction == OP_GET_PROPERTY ? (READ_STRING()) : (READ_STRING_LONG());
 
                 Value value;
-                if(tableGet(&instance->fields, name, &value)) {
+                if(tableGet(&instance->fieldNames, name, &value)) {
                     // remove instance and add field value to stack
-                    pop(); 
-                    push(value);
+                    pop();
+                    int index = (int)AS_NUMBER(value);
+                    push(instance->fields.values[index]);
                     break;
                 }
 
@@ -400,8 +401,23 @@ static InterpretResult run() {
                 }
 
                 ObjInstance *instance = AS_INSTANCE(peek(1));
+                ObjString *name = instruction == OP_SET_PROPERTY ? (READ_STRING()) : (READ_STRING_LONG());
+                Value index_val;
+                int index;
                 
-                tableSet(&instance->fields, (instruction == OP_SET_PROPERTY ? (READ_STRING()) : (READ_STRING_LONG())), peek(0));
+                if(tableGet(&instance->fieldNames, name, &index_val)) {
+                    // we're assigning to a property we've already stored in the fields array
+                    index = (int)AS_NUMBER(index_val);
+
+                    instance->fields.values[index] = peek(0);
+                } else {
+                    // we're assigning to a property that isn't on the instance yet
+                    index = instance->fields.count;
+                    
+                    writeValueArray(&instance->fields, peek(0));
+                    tableSet(&instance->fieldNames, name, NUMBER_VAL(index));
+                }
+                
 
                 // get value, pop instance, add value back to the stack (since it should be the result of the expression)
                 Value value = pop();
@@ -843,9 +859,11 @@ static bool invokeInstance(ObjString *name, int argCount, ObjInstance *instance)
     // look for field with same name before looking for function
     Value value;
 
-    if(tableGet(&instance->fields, name, &value)) {
-        vm.stackTop[-argCount - 1] = value;
-        return callValue(value, argCount);
+    if(tableGet(&instance->fieldNames, name, &value)) {
+        int index = (int)AS_NUMBER(value);
+        vm.stackTop[-argCount - 1] = instance->fields.values[index];
+
+        return callValue(instance->fields.values[index], argCount);
     }
 
     // call method on instance

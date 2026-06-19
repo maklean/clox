@@ -123,7 +123,8 @@ typedef struct {
 typedef struct {
     Obj obj;
     ObjClass *klass;
-    Table fields;
+    Table fieldNames; // maps field_name => index_in_fields_array
+    ValueArray fields; // holds the actual values of properties
 } ObjInstance;
 
 typedef struct {

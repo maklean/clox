@@ -161,7 +161,8 @@ static void freeObject(Obj *object) {
         } 
         case OBJ_INSTANCE: {
             ObjInstance *instance = (ObjInstance *)object;
-            freeTable(&instance->fields);
+            freeTable(&instance->fieldNames);
+            freeValueArray(&instance->fields);
 
             FREE(sizeof(ObjInstance), object);
 
@@ -287,7 +288,8 @@ static void blackenObject(Obj *object) {
         case OBJ_INSTANCE: {
             ObjInstance *instance = (ObjInstance *)object;
             markObject((Obj *)instance->klass);
-            markTable(&instance->fields);
+            markTable(&instance->fieldNames);
+            markArray(&instance->fields);
             break;
         }
 
