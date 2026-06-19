@@ -1042,10 +1042,14 @@ static void function(FunctionType type) {
     block();
 
     ObjFunction *function = endCompiler();
+    
+    push(OBJ_VAL(function));
 
     // emit the ObjFunction as a value so the function declaration instruction can bind to it.
     int index = currentChunk()->constants.count;
     writeValueArray(&currentChunk()->constants, OBJ_VAL(function));
+
+    pop();
 
     if(index <= 255) {
         emitBytes(OP_CLOSURE, (uint8_t)index);
