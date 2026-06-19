@@ -69,5 +69,5 @@ Other than that, I'm planning on adding some additional optimizations to the int
     The reason I went with this instead of keeping a single hash table mapping field names to field values is because hash table resizes would instantly 
     invalidate the cache and make this more complex. 
     
-    The overall access/storage time complexity stays the same since I still use the hash table to check if a property exists on an instance, and accessing using indexes on an array is O(1).
+        The overall access/storage time complexity stays the same since I still use the hash table to check if a property exists on an instance, and accessing using indexes on an array is O(1).
 - [ ] x86-64 Baseline JIT (compiling the instructions in `ObjFunction` to machine code when a certain call threshold is reached at runtime)
