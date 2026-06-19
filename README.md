@@ -65,9 +65,14 @@ Other than that, I'm planning on adding some additional optimizations to the int
 
 - [ ] Inline Caching for property access (i.e. for `OP_GET_PROPERTY`/`OP_SET_PROPERTY` - [apparently one of the instructions that take the longest amount of time](https://craftinginterpreters.com/optimization.html#:~:text=The%20big%20heavy%20instructions%20are%20OP_GET_GLOBAL%20with%2017%25%20of%20the%20execution%20time%2C%20OP_GET_PROPERTY%20at%2012%25%2C%20and%20OP_INVOKE%20which%20takes%20a%20whopping%2042%25%20of%20the%20total%20running%20time.))
     - **NOTE:** To make the inline caching implementation as easy as possible, I made property access/storage use a hash table and array together.
-    The array stores the values of the fields for an `ObjInstance`, whereas the hash table maps the field name to the index of its value in that array. 
+    The array stores the values of the fields for an `ObjInstance`, whereas the hash table (which is in `ObjClass`) maps the field name to the index of its value in that array. 
     The reason I went with this instead of keeping a single hash table mapping field names to field values is because hash table resizes would instantly 
     invalidate the cache and make this more complex. 
     
         The overall access/storage time complexity stays the same since I still use the hash table to check if a property exists on an instance, and access using indexes on an array is O(1).
+
+        One caveat is that the inline caching assumes all instances have the same object layout, so if you add a property to a certain instance outside of 
+        `init()`, accessing the same field (if not set or out-of-sync) on another instance is UB. It sucks but eh, learning project, toy language, 
+        it is what it is.
+
 - [ ] x86-64 Baseline JIT (compiling the instructions in `ObjFunction` to machine code when a certain call threshold is reached at runtime)

@@ -118,13 +118,19 @@ typedef struct {
     Obj obj;
     ObjString *name;
     Table methods;
+    #ifdef INLINE_CACHING
+    Table fieldNames; // maps field_name => index_in_fields_array
+    #endif
 } ObjClass;
 
 typedef struct {
     Obj obj;
     ObjClass *klass;
-    Table fieldNames; // maps field_name => index_in_fields_array
+    #ifdef INLINE_CACHING
     ValueArray fields; // holds the actual values of properties
+    #else
+    Table fields;
+    #endif
 } ObjInstance;
 
 typedef struct {

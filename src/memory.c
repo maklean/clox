@@ -156,13 +156,20 @@ static void freeObject(Obj *object) {
         case OBJ_CLASS: {
             ObjClass *klass = (ObjClass *)object;
             freeTable(&klass->methods);
+            #ifdef INLINE_CACHING
+            freeTable(&klass->fieldNames);
+            #endif
             FREE(sizeof(ObjClass), object);
             break;
         } 
         case OBJ_INSTANCE: {
             ObjInstance *instance = (ObjInstance *)object;
-            freeTable(&instance->fieldNames);
+            
+            #ifdef INLINE_CACHING
             freeValueArray(&instance->fields);
+            #else
+            freeTable(&instance->fields);
+            #endif
 
             FREE(sizeof(ObjInstance), object);
 
@@ -282,14 +289,20 @@ static void blackenObject(Obj *object) {
             ObjClass *klass = (ObjClass *)object;
             markObject((Obj *)klass->name);
             markTable(&klass->methods);
+            #ifdef INLINE_CACHING
+            markTable(&klass->fieldNames);
+            #endif
             break;
         }
 
         case OBJ_INSTANCE: {
             ObjInstance *instance = (ObjInstance *)object;
             markObject((Obj *)instance->klass);
-            markTable(&instance->fieldNames);
+            #ifdef INLINE_CACHING
             markArray(&instance->fields);
+            #else
+            markTable(&instance->fields);
+            #endif
             break;
         }
 

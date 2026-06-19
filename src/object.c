@@ -77,6 +77,9 @@ ObjClass *newClass(ObjString *name) {
 
     klass->name = name;
     initTable(&klass->methods);
+    #ifdef INLINE_CACHING
+    initTable(&klass->fieldNames);
+    #endif
 
     return klass;
 }
@@ -85,8 +88,11 @@ ObjInstance *newInstance(ObjClass *klass) {
     ObjInstance *instance = (ObjInstance *)ALLOCATE_OBJ(sizeof(ObjInstance), OBJ_INSTANCE);
 
     instance->klass = klass;
-    initTable(&instance->fieldNames);
+    #ifdef INLINE_CACHING
     initValueArray(&instance->fields);
+    #else
+    initTable(&instance->fields);
+    #endif
 
     return instance;
 }
