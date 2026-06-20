@@ -379,10 +379,9 @@ static InterpretResult run() {
 
                 Value value;
                 #ifdef INLINE_CACHING
-                    int ic_index = (READ_BYTE() << 8) | READ_BYTE();
-                    InlineCache ic = frame->closure->function->chunk.cache[ic_index];
+                    InlineCache *ic = &frame->closure->function->chunk.cache[(READ_BYTE() << 8) | READ_BYTE()];
 
-                    if(ic.klass == NULL || ic.klass != instance->klass) {
+                    if(ic->klass == NULL || ic->klass != instance->klass) {
                         if(tableGet(&instance->klass->fieldNames, name, &value)) {
                             //printf("Slow path (get).\n");
                             // remove instance and add field value to stack
@@ -390,8 +389,8 @@ static InterpretResult run() {
                             int index = (int)AS_NUMBER(value);
                             Value fieldValue = instance->fields.values[index];
 
-                            frame->closure->function->chunk.cache[ic_index].klass = instance->klass;
-                            frame->closure->function->chunk.cache[ic_index].index = index;
+                            ic->klass = instance->klass;
+                            ic->index = index;
 
                             push(fieldValue);
                             break;
@@ -406,7 +405,7 @@ static InterpretResult run() {
 
                     pop(); // pop instance off
 
-                    Value fieldValue = instance->fields.values[ic.index];
+                    Value fieldValue = instance->fields.values[ic->index];
 
                     push(fieldValue);
                 #else
@@ -440,10 +439,9 @@ static InterpretResult run() {
                     Value index_val;
                     int index;
 
-                    int ic_index = (READ_BYTE() << 8) | (READ_BYTE());
-                    InlineCache ic = frame->closure->function->chunk.cache[ic_index];
+                    InlineCache *ic = &frame->closure->function->chunk.cache[(READ_BYTE() << 8) | READ_BYTE()];
 
-                    if(ic.klass == NULL || ic.klass != instance->klass) {
+                    if(ic->klass == NULL || ic->klass != instance->klass) {
                         //printf("slow path (set).\n");
 
                         if(tableGet(&instance->klass->fieldNames, name, &index_val)) {
@@ -464,12 +462,12 @@ static InterpretResult run() {
                             tableSet(&instance->klass->fieldNames, name, NUMBER_VAL(index));
                         }
 
-                        frame->closure->function->chunk.cache[ic_index].klass = instance->klass;
-                        frame->closure->function->chunk.cache[ic_index].index = index;
+                        ic->klass = instance->klass;
+                        ic->index = index;
                     } else {
                         //printf("fast path (set).\n");
 
-                        index = ic.index;
+                        index = ic->index;
 
                         if(instance->fields.count <= index) {
                             writeValueArray(&instance->fields, peek(0));
