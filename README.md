@@ -74,5 +74,6 @@ Other than that, I'm planning on adding some additional optimizations to the int
         One caveat is that the inline caching assumes all instances have the same object layout, so if you add a property to a certain instance outside of 
         `init()`, accessing the same field (if not set or out-of-sync) on another instance is UB. It sucks but eh, learning project, toy language, 
         it is what it is.
+    - **RESULTS (using -O3):** **~35-37%** speedup on [Binary Trees](https://github.com/munificent/craftinginterpreters/blob/master/test/benchmark/binary_trees.lox) benchmark, **~15-17%** speedup on [Trees](https://github.com/munificent/craftinginterpreters/blob/master/test/benchmark/trees.lox) benchmark, **~1-3%** speedup on [Properties](https://github.com/munificent/craftinginterpreters/blob/master/test/benchmark/properties.lox) benchmark.
 
 - [ ] x86-64 Baseline JIT (compiling the instructions in `ObjFunction` to machine code when a certain call threshold is reached at runtime)
