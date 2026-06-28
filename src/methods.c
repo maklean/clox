@@ -851,13 +851,9 @@ static bool string_split(int argCount, Value *args, Value *result) {
     ObjArray *result_arr = newArray();
     push(OBJ_VAL(result_arr)); // prevent GC bugs
 
-    // not gonna assume that str->chars is a mutable string.
-    char buf[str->length];
-    memcpy(buf, str->chars, str->length);
-
-    char *ptr_str = buf; // cursor into buf
-    char *ptr_str_last = buf; // pointer to the first character of the string we haven't split yet
-    char *ptr_str_end = buf + str->length;
+    char *ptr_str = str->chars; // cursor into str
+    char *ptr_str_last = str->chars; // pointer to the first character of the string we haven't split yet
+    char *ptr_str_end = str->chars + str->length;
 
     // to avoid reinitialization
     Value split_str;
